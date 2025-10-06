@@ -1,13 +1,3 @@
-// ... 기존 import/샘플 생략
-import type { Source } from '../types/feed'
-
-// 이미 있던 함수들
-export async function fetchSuggestedSources(): Promise<Source[]> {
-  await new Promise(r => setTimeout(r, 150))
-  return sources
-}
-
-// ✅ 구독 신청 API (목)
 export async function subscribeToNewsletter(payload: {
   companyIds: string[]
   email: string

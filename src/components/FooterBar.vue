@@ -46,7 +46,7 @@ const copyEmail = async (): Promise<void> => {
 <style scoped>
 .footer {
   width: 100%;
-  background: linear-gradient(135deg, #f9f7f3 0%, #f0ece6 100%);
+  background: #0000;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   color: #6a5f55;
 }

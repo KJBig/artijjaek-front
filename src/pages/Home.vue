@@ -7,31 +7,29 @@
           한국 IT 기업의 최신 기술 글을 한눈에.<br />
           구독으로 놓치지 마세요.
         </p>
-        <button class="cta" @click="onSubscribe">구독 시작하기</button>
+        <button class="cta" @click="$emit('open-subscribe')">
+          구독 시작하기
+        </button>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-const onSubscribe = (): void => {
-  alert("구독하기 버튼 클릭됨!");
-};
+defineEmits<{ (e: 'open-subscribe'): void }>();
 </script>
 
 <style scoped>
-/* 전체 배경: 따뜻한 아이보리톤 */
 .page {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  background: linear-gradient(135deg, #f9f7f3 0%, #f0ece6 100%);
+  background: linear-gradient(135deg, #f9f7f3 0%, #fafafa 100%);
   color: #3c3c3c;
   font-family: 'Pretendard', sans-serif;
 }
 
-/* 메인 콘텐츠 중앙 배치 */
 .main {
   flex: 1;
   display: flex;
@@ -48,18 +46,17 @@ const onSubscribe = (): void => {
 .title {
   font-size: 40px;
   font-weight: 700;
-  color: #3b332c; /* 부드러운 진한 브라운 */
+  color: #3b332c;
   margin-bottom: 16px;
 }
 
 .desc {
   font-size: 18px;
   line-height: 1.6;
-  color: #6a5f55; /* 따뜻한 중간 브라운 */
+  color: #6a5f55;
   margin-bottom: 32px;
 }
 
-/* CTA 버튼: 크림 + 브라운 포인트 */
 .cta {
   background-color: #e7d7c1;
   color: #3b332c;
