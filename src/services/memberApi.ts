@@ -1,5 +1,11 @@
-// src/services/api.ts
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const jsonHeaders = { "Content-Type": "application/json" };
+
+export type ApiResponse<T = unknown> = {
+  isSuccess: boolean;
+  message?: string;
+  data?: T;
+};
 
 export interface SubscribeMemberPayload {
   companyIds: number[];
@@ -11,7 +17,7 @@ export async function subscribeMember(payload: SubscribeMemberPayload) {
   try {
     const res = await fetch(`${BASE_URL}/api/v1/member/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders,
       body: JSON.stringify(payload),
     });
 

@@ -2,15 +2,13 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const jsonHeaders = { "Content-Type": "application/json" };
 
-export interface Company {
+export interface Category {
   id: number;
-  image: string;
-  nameKr: string;
-  nameEn: string;
+  name: string;
 }
 
-export interface PagedCompanies {
-  items: Company[];
+export interface PagedCategories {
+  items: Category[];
   hasMore: boolean;
   nextPage: number | null;
 }
@@ -18,17 +16,17 @@ export interface PagedCompanies {
 /**
  * 회사 목록을 페이지 단위로 가져오는 함수
  */
-export async function fetchCompaniesPage(
+export async function fetchCategoriesPage(
   page: number,
   size: number
-): Promise<PagedCompanies> {
+): Promise<PagedCategories> {
   const qs = new URLSearchParams({
     page: String(page),
     size: String(size),
   });
 
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/company/list?${qs.toString()}`, {
+    const res = await fetch(`${BASE_URL}/api/v1/category/list?${qs.toString()}`, {
       method: "GET",
       headers: jsonHeaders
     });
@@ -37,11 +35,9 @@ export async function fetchCompaniesPage(
     const data = await res.json();
     const rawItems = data?.data.content;
 
-    const items: Company[] = rawItems.map((conpany: any) => ({
-      id: conpany.companyId,
-      image: conpany.companyImageUrl,
-      nameKr: conpany.companyNameKr,
-      nameEn: conpany.companyNameEn
+    const items: Category[] = rawItems.map((category: any) => ({
+      id: category.categoryId,
+      name: category.categoryName,
     }));
 
     let hasMore: boolean;
@@ -55,7 +51,7 @@ export async function fetchCompaniesPage(
 
     return { items, hasMore, nextPage: hasMore ? page + 1 : null };
   } catch (err) {
-    console.error("[fetchCompaniesPage] Error:", err);
+    console.error("[fetchCategoriesPage] Error:", err);
     return { items: [], hasMore: false, nextPage: null };
   }
 }
@@ -63,11 +59,11 @@ export async function fetchCompaniesPage(
 /**
  * 전체 회사 목록을 모두 불러오는 함수 (전체선택용)
  */
-export async function fetchAllCompanies(size = 100): Promise<Company[]> {
-  const all: Company[] = [];
+export async function fetchAllCategories(size = 100): Promise<Category[]> {
+  const all: Category[] = [];
   let page = 0;
   while (true) {
-    const { items, hasMore, nextPage } = await fetchCompaniesPage(page, size);
+    const { items, hasMore, nextPage } = await fetchCategoriesPage(page, size);
     if (items.length) all.push(...items);
     if (!hasMore || nextPage == null) break;
     page = nextPage;

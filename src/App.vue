@@ -2,7 +2,6 @@
 import { ref } from "vue";
 import HeaderNav from "./components/HeaderNav.vue";
 import FooterBar from "./components/FooterBar.vue";
-import SubscribeModal from "./components/SubscribeModal.vue";
 
 const showSubscribe = ref(false);
 </script>
@@ -13,10 +12,6 @@ const showSubscribe = ref(false);
     <header-nav @open-subscribe="showSubscribe = true"></header-nav>
     <router-view @open-subscribe="showSubscribe = true"></router-view>
     <footer-bar></footer-bar>
-    <subscribe-modal
-      v-model="showSubscribe"
-      @submit="handleSubscribeSubmit"
-    ></subscribe-modal>
   </div>
 </template>
 
