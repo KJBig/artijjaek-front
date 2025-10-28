@@ -130,7 +130,7 @@
                 role="listbox"
                 :aria-activedescendant="undefined"
               >
-                <!-- 전체 선택 (fetchCompaniesPage만 반복 호출해서 전량 로드) -->
+                <!-- 전체 선택 (페이징 반복 호출로 전량 로드) -->
                 <label class="option option-all">
                   <input class="cb" type="checkbox" :checked="isAllSelectedCategories" @change="toggleSelectAllCategories" />
                   <span class="box" aria-hidden="true"></span>
@@ -194,33 +194,45 @@
           </div>
 
           <!-- ================= 이메일 ================= -->
-          <label class="label" for="email">이메일</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            class="input"
-            :class="{ 'is-invalid': errors.email }"
-            placeholder="artijjaek.dev@gmail.com"
-            @blur="validateEmail"
-          />
-          <p v-if="errors.email" class="error-text">{{ errors.email }}</p>
+          <div class="field field--email">
+            <label class="label" for="email">이메일</label>
+            <div class="input-row">
+              <input
+                id="email"
+                v-model="form.email"
+                type="email"
+                class="input"
+                :class="{ 'is-invalid': errors.email }"
+                placeholder="artijjaek.dev@gmail.com"
+                @blur="validateEmail"
+              />
+            </div>
+            <p v-if="errors.email" class="error-text">{{ errors.email }}</p>
+          </div>
 
           <!-- ================= 닉네임 ================= -->
-          <label class="label" for="nickname">닉네임</label>
-          <input
-            id="nickname"
-            v-model="form.nickname"
-            type="text"
-            class="input"
-            :class="{ 'is-invalid': errors.nickname }"
-            placeholder="예: 준커"
-            @blur="validateNickname"
-          />
-          <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
+          <div class="field">
+            <label class="label" for="nickname">닉네임</label>
+            <input
+              id="nickname"
+              v-model="form.nickname"
+              type="text"
+              class="input"
+              :class="{ 'is-invalid': errors.nickname }"
+              placeholder="예: 준커"
+              @blur="validateNickname"
+            />
+            <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
+          </div>
 
           <!-- ================= 제출 ================= -->
-          <button class="primary" type="button" :disabled="isSubmitting" @click="submit">
+          <button
+            class="primary"
+            type="button"
+            :disabled="isSubmitting"
+            @click="submit"
+            title="확인"
+          >
             <span v-if="isSubmitting">처리 중…</span>
             <span v-else>확인</span>
           </button>
@@ -228,6 +240,15 @@
           <p v-if="errors.submit" class="submit-error" role="alert">{{ errors.submit }}</p>
         </div>
       </section>
+
+      <!-- ✅ 성공 팝업 -->
+      <SuccessPopup
+        v-if="popup.open"
+        :title="popup.title"
+        :message="popup.message"
+        :redirect-to="'/'"
+        @close="popup.open = false"
+      />
     </main>
   </div>
 </template>
@@ -235,17 +256,25 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { fetchCompaniesPage as fetchCompanyPage, fetchAllCompanies, type Company } from "../services/companyApi";
-// 카테고리는 categoryApi.ts에서 fetchCompaniesPage(page, size)만 사용
 import { fetchCategoriesPage as fetchCategoryPage } from "../services/categoryApi";
 import { subscribeMember } from "../services/memberApi";
+import SuccessPopup from "../components/SuccessPopup.vue";
 
-type Category = Company;
+/** 카테고리 타입 (id/name/image 정도만 사용) */
+type Category = { id: number; name: string; image?: string };
 
 /* 상태 */
 const form = ref({ email: "", nickname: "" });
 const options = ref<{ companies: Company[]; categories: Category[] }>({ companies: [], categories: [] });
 const selected = ref<{ companies: number[]; categories: number[] }>({ companies: [], categories: [] });
 const isSubmitting = ref(false);
+
+/* ✅ 팝업 상태 */
+const popup = ref<{ open: boolean; title: string; message: string }>({
+  open: false,
+  title: "구독 등록 완료",
+  message: "구독 등록이 완료되었습니다.\n 곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!",
+});
 
 /* ============ 회사: 페이지네이션 상태/참조 ============ */
 const pageCompanies = ref(0);
@@ -360,6 +389,9 @@ const categoryById = computed(() => {
   return m;
 });
 
+/* 이메일 유효성 */
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /* ===== 회사 선택 ===== */
 const toggleCompany = (id: number) => {
   const set = new Set(selected.value.companies);
@@ -397,7 +429,7 @@ const toggleSelectAllCompanies = async () => {
   errors.value.companies = selected.value.companies.length ? undefined : "회사를 1개 이상 선택해주세요.";
 };
 
-/* ===== 전체 선택: 카테고리 (fetchCategoryPage만 사용) ===== */
+/* ===== 전체 선택: 카테고리 (페이징 반복 호출) ===== */
 const fetchAllCategoriesViaPaging = async () => {
   const seen = new Set<number>();
   const acc: Category[] = [];
@@ -455,7 +487,6 @@ const loadMoreCategories = async () => {
 };
 
 /* ===== 이메일/닉네임/선택 검증 ===== */
-const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const validateEmail = () => {
   if (!form.value.email.trim()) return (errors.value.email = "이메일을 입력해주세요.");
   if (!emailRe.test(form.value.email.trim())) return (errors.value.email = "올바른 이메일 형식이 아닙니다.");
@@ -484,6 +515,7 @@ const validateAll = () => {
 /* ===== 제출 ===== */
 const submit = async () => {
   errors.value.submit = undefined;
+
   if (!validateAll()) return;
 
   const payload = {
@@ -493,11 +525,46 @@ const submit = async () => {
     nickname: form.value.nickname.trim(),
   };
 
+  // 다양한 서비스 구현 형태를 대비한 응답 정규화 헬퍼
+  const normalize = async (resp: any) => {
+    // 1) fetch Response 그대로 반환하는 경우
+    if (resp && typeof resp === "object" && "ok" in resp && "status" in resp) {
+      const httpStatus = resp.status as number;
+      let data: any = null;
+      try { data = await resp.json(); } catch { /* body가 없을 수도 있음 */ }
+      return {
+        isSuccess: Boolean(data?.isSuccess),
+        message: data?.message,
+        httpStatus,
+      };
+    }
+    // 2) JSON으로 { isSuccess, message, status } 형태가 오는 경우
+    return {
+      isSuccess: Boolean(resp?.isSuccess),
+      message: resp?.message,
+      httpStatus: resp?.status ?? resp?._httpStatus,
+    };
+  };
+
   try {
     isSubmitting.value = true;
-    await subscribeMember(payload);
-    resetFormAndSelection();
-    alert("구독 등록이 완료되었습니다 ✅");
+
+    const raw = await subscribeMember(payload);
+    const { isSuccess, message, httpStatus } = await normalize(raw);
+
+    if (isSuccess) {
+      // ✅ 성공: 팝업 열고, 폼/선택 초기화
+      popup.value = {
+        open: true,
+        title: "구독 등록 완료 ✅",
+        message: "곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!"
+      };
+      resetFormAndSelection();
+    } else {
+      // ❌ 실패: 버튼 아래 빨간 글씨로 출력 (message 없으면 HTTP status)
+      const fallback = httpStatus ? `요청이 실패했습니다. (HTTP ${httpStatus})` : "요청이 실패했습니다.";
+      errors.value.submit = message ?? fallback;
+    }
   } catch (err: any) {
     errors.value.submit = err?.message ?? "구독 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
   } finally {
@@ -640,62 +707,72 @@ onMounted(() => {
 /* ===== Layout / Theme ===== */
 .page{
   min-height: 90vh;
-  background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
+  background:#ffffff; /* 전체 흰 배경 */
   display:flex; flex-direction:column;
 }
 .main{
   flex:1; display:grid; place-items:center;
   padding: 40px 16px;
 }
+
+/* 패널: 상단 얇은 시그니처 스트립 + 은은한 그림자 */
 .panel{
-  width: min(620px, 100%);
+  position: relative;
+  width: min(640px, 100%);
   background:#fff;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(36, 26, 88, .25);
-  overflow:hidden;
-  transform: translateY(-1.5vh);
+  border: 1px solid #e9e9f1;
+  box-shadow: 0 10px 30px rgba(20, 20, 33, .06);
+  overflow: hidden;
 }
+.panel::before{
+  content:"";
+  position:absolute; left:0; right:0; top:0;
+  height:6px;                       /* ▶ 얇은 시그니처 스트립 */
+  background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
+}
+
+/* 헤더 */
 .panel-head{
   padding: 24px 24px 12px 24px;
-  border-bottom: 1px solid rgba(118,82,201,.16);
+  border-bottom: 1px solid #eeeef5;
 }
 .title{
   margin:0;
-  font-size: 22px; font-weight: 800; line-height:1.3;
-  background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
-  -webkit-background-clip: text;
-  background-clip:text;
-  color: transparent;
+  font-size: 24px; font-weight: 800; line-height:1.3;
+  color:#1f1f2b;
 }
 .subtitle{
-  margin-top: 6px; color:#6f6c80; font-size: 14px;
+  margin-top: 6px; color:#6e6a7e; font-size: 14px;
 }
+
+/* 본문: 헤더 구분선과 첫 필드(회사) 사이 간격 = 16px 로 통일 */
 .panel-body{
-  padding: 20px;
-  display:grid; gap:16px;
+  padding: 16px 24px 24px; /* ⬅ top을 16px로 맞춤 */
+  display:grid; gap:16px;  /* 모든 섹션 사이 간격 16px */
+  background: linear-gradient(180deg, #ffffff 0%, #fafaff 100%);
 }
 
 /* ===== Controls ===== */
 .field{ min-width:0; }
-.label{ font-weight:700; color:#2e2b3a; }
-.label small{ font-weight:400; color:#7b7691; }
+.label{ font-weight:700; color:#2a2733; }
+.label small{ font-weight:400; color:#8a86a0; }
 
 /* 드롭다운 */
 .dropdown{ position:relative; z-index:10; min-width:0; }
-/* ✅ 열렸을 때 최상단으로 올림 (서로 겹칠 때 위로) */
 .dropdown.is-open{ z-index: 1000; }
 .dropdown.is-open .dropdown-menu{ z-index: 1100; }
 
 .dropdown-toggle{
   width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
-  border:1px solid rgba(118,82,201,.35);
+  border:1px solid #deddee;
   background:#fff;
-  color:#332e4a;
+  color:#2b2740;
   border-radius:12px; padding:12px 14px; cursor:pointer;
-  transition: box-shadow .2s ease, border-color .2s ease;
+  transition: box-shadow .2s ease, border-color .2s ease, background .2s ease;
 }
-.dropdown-toggle:hover{ border-color: rgba(118,82,201,.55); }
-.dropdown-toggle:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(118,82,201,.22); }
+.dropdown-toggle:hover{ border-color:#cfcde7; background:#fafaff; }
+.dropdown-toggle:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(118,82,201,.18); }
 
 .placeholder{ color:#8c88a3; }
 .summary{ color:#4b42b9; font-weight:700; }
@@ -704,22 +781,22 @@ onMounted(() => {
 .dropdown-menu{
   position:absolute; left:0; right:0; top: calc(100% + 6px);
   background:#fff;
-  border:1px solid rgba(118,82,201,.25);
+  border:1px solid #e6e5f2;
   border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(36, 26, 88, .18);
+  box-shadow: 0 14px 32px rgba(23, 16, 51, .10);
   padding:8px; display:grid; gap:4px;
   max-height: 260px; overflow:auto;
-  z-index: 20; /* 기본값 */
+  z-index: 20;
   color:#2e2b3a;
 }
 .option{
   display:flex; align-items:center; gap:10px;
   padding:8px 10px; border-radius:10px; cursor:pointer;
 }
-.option:hover{ background: linear-gradient(135deg, rgba(102,117,224,.08) 0%, rgba(118,82,201,.10) 100%); }
+.option:hover{ background: #f7f6ff; }
 .option-all{ background:#fbfaff; border:1px solid rgba(118,82,201,.10); }
-.option-all:hover{ background: linear-gradient(135deg, rgba(102,117,224,.10) 0%, rgba(118,82,201,.12) 100%); }
-.divider{ height:1px; background: rgba(118,82,201,.16); margin:4px 6px; }
+.option-all:hover{ background:#f2efff; }
+.divider{ height:1px; background: #efeff7; margin:4px 6px; }
 
 .cb{ position:absolute; opacity:0; width:0; height:0; }
 .box{
@@ -728,7 +805,7 @@ onMounted(() => {
 }
 .cb:checked + .box{ background:#4b42b9; border-color:#4b42b9; }
 .cb:checked + .box::after{
-  content:""; position:absolute; left:4px; top:2px;
+  content:""; position:absolute; left:2.5px; top:2px;
   width:8px; height:4px; border:2px solid #fff; border-top:0; border-right:0; transform: rotate(-45deg);
 }
 
@@ -749,12 +826,13 @@ onMounted(() => {
 .chip{
   flex:0 0 auto; display:inline-flex; align-items:center; gap:6px;
   padding:6px 10px; border-radius:999px;
-  background:#ffffff; border:1px solid rgba(118,82,201,.28);
+  background:#ffffff;
+  border:1px solid #e4e3f0;
   scroll-snap-align:start;
-  color: #000;
+  color: #16161a;
 }
 .chip-thumb{ width:18px; height:18px; border-radius:4px; object-fit:cover; flex:0 0 18px; }
-.chip-text{ max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #000;}
+.chip-text{ max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #16161a;}
 .chip-x{ background:none; border:0; cursor:pointer; color:#6e66c6; }
 
 /* 회사/카테고리 썸네일 공통 */
@@ -762,30 +840,38 @@ onMounted(() => {
 
 /* 인풋 */
 .input{
-  width:100%; border:1px solid rgba(118,82,201,.35);
+  width:100%; border:1px solid #deddee;
   background:#fff; border-radius:12px; padding:12px 14px; font-size:14px; min-width:0;
-  color:#2e2b3a; caret-color:#4b42b9;
+  color:#2b2a33; caret-color:#4b42b9;
 }
-.input::placeholder{ color:#8c88a3; }
+.input::placeholder{ color:#9a98aa; }
 .input.is-invalid, .dropdown.is-invalid .dropdown-toggle{
-  border-color:#d96060; box-shadow:0 0 0 3px rgba(217,96,96,.18); background:#fff7f7;
+  border-color:#d96060; box-shadow:0 0 0 3px rgba(217,96,96,.12); background:#fff7f7;
 }
+
+/* 이메일 입력 + 버튼 가로 배치 */
+.input-row{
+  display:flex; gap:8px; align-items:center;
+}
+
+/* ✅ 모든 섹션 간격을 grid gap(16px)로 일원화하기 위해 커스텀 마진 제거 */
+.field--email { margin-bottom: 0; }
 
 /* 에러 */
-.error-text{ color:#c64a4a; font-size:13px; }
+.error-text{ color:#b73737; font-size:13px; }
 
-/* 제출 버튼 (그라데이션 프라이머리) */
+/* 제출 버튼 */
 .primary{
   width:100%; padding:12px 14px; border-radius:12px;
   border:1px solid rgba(118,82,201,.0);
   background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
   color:#fff; font-weight:800; cursor:pointer;
-  box-shadow: 0 8px 20px rgba(102,117,224,.28);
+  box-shadow: 0 10px 24px rgba(102,117,224,.24);
   transition: transform .15s ease, box-shadow .2s ease;
 }
 .primary:hover:not([disabled]){
   transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(102,117,224,.38);
+  box-shadow: 0 14px 30px rgba(102,117,224,.32);
 }
 .primary[disabled]{ opacity:.65; cursor:not-allowed; }
 
@@ -794,7 +880,6 @@ onMounted(() => {
 /* 반응형 */
 @media (max-width: 640px){
   .panel-head{ padding:20px; }
-  .panel-body{ padding:16px; }
-  .panel{ transform: translateY(-1vh); }
+  .panel-body{ padding:16px; } /* 모바일도 동일 간격 유지 */
 }
 </style>

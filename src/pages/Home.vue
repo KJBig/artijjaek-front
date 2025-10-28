@@ -26,67 +26,74 @@ const goRegister = () => router.push('/register');
 .page {
   display: flex;
   flex-direction: column;
-  /* ✅ 모바일 주소창 포함한 안전한 뷰포트 높이 */
   min-height: 100svh;
   width: 100%;
-  background: linear-gradient(135deg, #6675e0 0%, #7652c9 100%);
-  color: #ffffff;
+  background: #ffffff; /* ✅ 흰색 배경 */
+  color: #222222;
   font-family: 'Pretendard', sans-serif;
 }
 
 .main {
   flex: 1;
   display: flex;
-  align-items: center;   /* 가로 중앙 */
-  justify-content: center; /* 세로 중앙 기준 */
+  align-items: center;
+  justify-content: center;
 }
 
-/* ✅ 중앙에서 살짝 위로 올리기 */
 .content {
   text-align: center;
   max-width: 600px;
   padding: 20px;
-  transform: translateY(-6vh);
+  transform: translateY(-10vh);
 }
 
 .title {
   font-size: 40px;
   font-weight: 700;
-  color: #ffffff;
+  color: #4b4b4b; /* 짙은 회색으로 대비 */
   margin-bottom: 16px;
 }
 
 .desc {
   font-size: 18px;
   line-height: 1.6;
-  color: #e5e4f2;
+  color: #666666;
   margin-bottom: 32px;
 }
 
+/* ✅ 시그니처 컬러 기반 버튼 */
 .cta {
-  background: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #6675e0 0%, #7652c9 100%);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: none;
   border-radius: 14px;
-  padding: 14px 28px;
+  padding: 14px 32px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(102, 117, 224, 0.25);
 }
 
+/* ✅ hover 시 좀 더 밝게 */
 .cta:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, #7684f0 0%, #8863d8 100%);
   transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 117, 224, 0.35);
 }
 
-/* 📱 작은 화면에서는 이동량을 조금 줄임 */
+/* ✅ 작은 화면 대응 */
 @media (max-width: 640px) {
+  .title {
+    font-size: 32px;
+  }
+
+  .desc {
+    font-size: 16px;
+  }
+
   .content {
-    transform: translateY(-4vh);
+    transform: translateY(-6vh);
   }
 }
 </style>
