@@ -1,6 +1,21 @@
+<!-- src/pages/Settings.vue -->
 <template>
   <div class="page">
-    <main class="main">
+    <!-- ✅ 인증 오류: 공통 패널로 처리 -->
+    <main class="main" v-if="guard.fatal.value">
+      <AuthErrorPanel
+        :title="'인증 정보가 유효하지 않습니다'"
+        :message="`링크에 포함된 <strong>email</strong> 또는 <strong>token</strong>이 올바르지 않아요.<br/>이메일 받은 편지함에서 최신 링크로 다시 시도해 주세요.`"
+        :error="guard.error"
+        primaryText="다시 시도"
+        secondaryText="홈으로"
+        @primary="retry"
+        @secondary="goHome"
+      />
+    </main>
+
+    <!-- ✅ 정상 화면 -->
+    <main class="main" v-else>
       <section class="panel" role="form" aria-labelledby="page-title">
         <header class="panel-head">
           <h1 id="page-title" class="title">아티짹 구독 설정</h1>
@@ -8,9 +23,6 @@
         </header>
 
         <div class="panel-body">
-          <!-- 최상단 에러 -->
-          <p v-if="topError" class="submit-error" role="alert">{{ topError }}</p>
-
           <!-- ================= 회사 선택 ================= -->
           <div class="field">
             <span class="label">회사 <small>중복 선택 가능</small></span>
@@ -23,7 +35,7 @@
                 :aria-expanded="openDropdown ? 'true' : 'false'"
                 aria-haspopup="listbox"
                 @click="toggleDropdown"
-                :disabled="!hasValidParams || isLoading"
+                :disabled="!guard.hasValidParams || guard.isLoading"
               >
                 <span v-if="selected.companies.length === 0" class="placeholder">선택하세요</span>
                 <span v-else class="summary">{{ selected.companies.length }}개 선택됨</span>
@@ -104,7 +116,7 @@
                 :aria-expanded="openCategoryDropdown ? 'true' : 'false'"
                 aria-haspopup="listbox"
                 @click="toggleCategoryDropdown"
-                :disabled="!hasValidParams || isLoading"
+                :disabled="!guard.hasValidParams || guard.isLoading"
               >
                 <span v-if="selected.categories.length === 0" class="placeholder">선택하세요</span>
                 <span v-else class="summary">{{ selected.categories.length }}개 선택됨</span>
@@ -198,7 +210,7 @@
               :class="{ 'is-invalid': errors.nickname }"
               placeholder="예: 준커"
               @blur="validateNickname"
-              :disabled="!hasValidParams || isLoading"
+              :disabled="!guard.hasValidParams || guard.isLoading"
             />
             <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
           </div>
@@ -208,7 +220,7 @@
             <button
               class="primary"
               type="button"
-              :disabled="isSubmitting || !hasValidParams || !isDirty || !!errors.companies || !!errors.categories || !!errors.nickname"
+              :disabled="isSubmitting || !guard.hasValidParams || !isDirty || !!errors.companies || !!errors.categories || !!errors.nickname"
               @click="save"
               title="저장"
             >
@@ -219,7 +231,7 @@
             <button
               class="link-danger"
               type="button"
-              :disabled="isUnsubmitting || !hasValidParams"
+              :disabled="isUnsubmitting || !guard.hasValidParams"
               @click="openUnsubscribePopup"
               title="구독 취소"
             >
@@ -252,6 +264,8 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import AuthErrorPanel from "../components/AuthErrorPanel.vue";
+import { useAuthGuard } from "../composables/useAuthGuard.ts";
 import { fetchCompaniesPage as fetchCompanyPage, fetchAllCompanies, type Company } from "../services/companyApi";
 import { fetchCategoriesPage as fetchCategoryPage } from "../services/categoryApi";
 import { getMySubscription, updateMySubscription, unsubscribeMember } from "../services/memberApi";
@@ -260,32 +274,34 @@ import UnsubscribePopup from "../components/UnsubscribePopup.vue";
 /** 카테고리 타입 */
 type Category = { id: number; name: string; image?: string };
 
-/* 쿼리 파라미터(email, token) */
+/* 라우팅/가드 */
 const route = useRoute();
 const router = useRouter();
-const token = computed(() => (route.query.token as string | undefined)?.trim());
-const emailFromQuery = computed(() => (route.query.email as string | undefined)?.trim());
-const hasValidParams = computed(() => !!token.value && !!emailFromQuery.value);
+const guard = useAuthGuard();
 
-/* 상태 */
-const isLoading = ref(false);
+const token = guard.token;
+const emailFromQuery = guard.email;
+
+/* 제출/진행 상태 */
 const isSubmitting = ref(false);
 const isUnsubmitting = ref(false);
-const topError = ref<string | undefined>(undefined);
+
+/* 알림 */
 const saveInfo = ref<string | undefined>(undefined);
 
+/* 폼 상태 */
 const form = ref({ email: "", nickname: "" });
 const options = ref<{ companies: Company[]; categories: Category[] }>({ companies: [], categories: [] });
 const selected = ref<{ companies: number[]; categories: number[] }>({ companies: [], categories: [] });
 
-/* 초기 스냅샷 (dirty 체크용: 회사/카테고리/닉네임 비교) */
+/* 초기 스냅샷 (dirty 체크용) */
 const initialSnapshot = ref<{ companies: number[]; categories: number[]; nickname: string }>({
   companies: [],
   categories: [],
   nickname: "",
 });
 
-/* 비교 유틸 */
+/* 유틸 */
 const sameArray = (a: number[], b: number[]) => {
   if (a.length !== b.length) return false;
   const as = [...a].sort((x, y) => x - y);
@@ -293,8 +309,6 @@ const sameArray = (a: number[], b: number[]) => {
   for (let i = 0; i < as.length; i++) if (as[i] !== bs[i]) return false;
   return true;
 };
-
-/* dirty 계산 */
 const isDirty = computed(() => {
   const sameCompanies = sameArray(selected.value.companies, initialSnapshot.value.companies);
   const sameCategories = sameArray(selected.value.categories, initialSnapshot.value.categories);
@@ -302,7 +316,7 @@ const isDirty = computed(() => {
   return !(sameCompanies && sameCategories && sameNickname);
 });
 
-/* ===== 회사 페이징 ===== */
+/* 회사 페이징 */
 const pageCompanies = ref(0);
 const sizeCompanies = ref(10);
 const loadingCompanies = ref(false);
@@ -312,7 +326,7 @@ const menuRef = ref<HTMLElement | null>(null);
 const toggleRef = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
-/* ===== 카테고리 페이징 ===== */
+/* 카테고리 페이징 */
 const pageCategories = ref(0);
 const sizeCategories = ref(10);
 const loadingCategories = ref(false);
@@ -329,7 +343,7 @@ const openCategoryDropdown = ref(false);
 /* 에러 */
 const errors = ref<{ companies?: string; categories?: string; nickname?: string; submit?: string }>({});
 
-/* computed */
+/* computed map */
 const allCompanyIds = computed(() => options.value.companies.map((c) => c.id));
 const isAllSelectedCompanies = computed(
   () => allCompanyIds.value.length > 0 && selected.value.companies.length === allCompanyIds.value.length
@@ -339,7 +353,6 @@ const companyById = computed(() => {
   for (const c of options.value.companies) m.set(c.id, c);
   return m;
 });
-
 const allCategoryIds = computed(() => options.value.categories.map((c) => c.id));
 const isAllSelectedCategories = computed(
   () => allCategoryIds.value.length > 0 && selected.value.categories.length === allCategoryIds.value.length
@@ -350,7 +363,7 @@ const categoryById = computed(() => {
   return m;
 });
 
-/* ===== 드롭다운 제어 (회사) ===== */
+/* 드롭다운 제어 (회사) */
 const onWindowClickCompanies = (e: MouseEvent) => {
   const t = e.target as Node;
   if (menuRef.value?.contains(t) || toggleRef.value?.contains(t)) return;
@@ -358,7 +371,7 @@ const onWindowClickCompanies = (e: MouseEvent) => {
   cleanupDropdownCompanies();
 };
 const toggleDropdown = async () => {
-  if (!hasValidParams.value || isLoading.value) return;
+  if (!guard.hasValidParams.value || guard.isLoading.value) return;
   openDropdown.value = !openDropdown.value;
   if (openDropdown.value) {
     if (options.value.companies.length === 0) await loadMoreCompanies();
@@ -381,7 +394,7 @@ const cleanupDropdownCompanies = () => {
   window.removeEventListener("click", onWindowClickCompanies, { capture: true } as any);
 };
 
-/* ===== 드롭다운 제어 (카테고리) ===== */
+/* 드롭다운 제어 (카테고리) */
 const onWindowClickCategories = (e: MouseEvent) => {
   const t = e.target as Node;
   if (menuRefCat.value?.contains(t) || toggleRefCat.value?.contains(t)) return;
@@ -389,7 +402,7 @@ const onWindowClickCategories = (e: MouseEvent) => {
   cleanupDropdownCategories();
 };
 const toggleCategoryDropdown = async () => {
-  if (!hasValidParams.value || isLoading.value) return;
+  if (!guard.hasValidParams.value || guard.isLoading.value) return;
   openCategoryDropdown.value = !openCategoryDropdown.value;
   if (openCategoryDropdown.value) {
     if (options.value.categories.length === 0) await loadMoreCategories();
@@ -417,7 +430,7 @@ onBeforeUnmount(() => {
   cleanupDropdownCategories();
 });
 
-/* ===== API 호출 + 무한 스크롤 ===== */
+/* API + 무한 스크롤 */
 const loadMoreCompanies = async () => {
   if (loadingCompanies.value || !hasMoreCompanies.value) return;
   loadingCompanies.value = true;
@@ -445,7 +458,7 @@ const loadMoreCategories = async () => {
   }
 };
 
-/* ===== 전체 선택 ===== */
+/* 전체 선택 */
 const toggleSelectAllCompanies = async () => {
   if (isAllSelectedCompanies.value) {
     selected.value.companies = [];
@@ -462,9 +475,8 @@ const fetchAllCategoriesViaPaging = async (): Promise<Category[]> => {
   const acc: Category[] = [];
   let p = 0;
   let more = true;
-  let guard = 0;
-
-  while (more && guard < 1000) {
+  let guardLoop = 0;
+  while (more && guardLoop < 1000) {
     const { items, hasMore, nextPage } = await fetchCategoryPage(p, sizeCategories.value);
     for (const it of items) {
       if (!seen.has(it.id)) {
@@ -475,7 +487,7 @@ const fetchAllCategoriesViaPaging = async (): Promise<Category[]> => {
     more = !!hasMore;
     if (nextPage == null || nextPage === p) p += 1;
     else p = nextPage;
-    guard++;
+    guardLoop++;
   }
   return acc;
 };
@@ -491,7 +503,7 @@ const toggleSelectAllCategories = async () => {
   errors.value.categories = selected.value.categories.length ? undefined : "카테고리를 1개 이상 선택해주세요.";
 };
 
-/* ===== 검증 ===== */
+/* 검증 */
 const validateNickname = () => {
   if (!form.value.nickname.trim()) return (errors.value.nickname = "닉네임을 입력해주세요.");
   errors.value.nickname = undefined;
@@ -511,7 +523,7 @@ const validateAll = () => {
   return !errors.value.nickname && !errors.value.companies && !errors.value.categories;
 };
 
-/* ===== 선택 제어 ===== */
+/* 선택 제어 */
 const toggleCompany = (id: number) => {
   const set = new Set(selected.value.companies);
   set.has(id) ? set.delete(id) : set.add(id);
@@ -522,7 +534,6 @@ const removeCompany = (id: number) => {
   selected.value.companies = selected.value.companies.filter((v) => v !== id);
   errors.value.companies = selected.value.companies.length ? undefined : "회사를 1개 이상 선택해주세요.";
 };
-
 const toggleCategory = (id: number) => {
   const set = new Set(selected.value.categories);
   set.has(id) ? set.delete(id) : set.add(id);
@@ -534,12 +545,12 @@ const removeCategory = (id: number) => {
   errors.value.categories = selected.value.categories.length ? undefined : "카테고리를 1개 이상 선택해주세요.";
 };
 
-/* ===== 저장 ===== */
+/* 저장 */
 const save = async () => {
   errors.value.submit = undefined;
   saveInfo.value = undefined;
 
-  if (!hasValidParams.value) {
+  if (!guard.hasValidParams.value) {
     errors.value.submit = "유효하지 않은 접근입니다. (필수 파라미터 누락)";
     return;
   }
@@ -575,32 +586,30 @@ const save = async () => {
   }
 };
 
-/* ===== 구독 취소 플로우 ===== */
+/* 구독 취소 */
 const unsub = ref<{ open: boolean }>({ open: false });
-
 const openUnsubscribePopup = () => {
   errors.value.submit = undefined;
   saveInfo.value = undefined;
-
-  if (!hasValidParams.value) {
+  if (!guard.hasValidParams.value) {
     errors.value.submit = "유효하지 않은 접근입니다. (필수 파라미터 누락)";
     return;
   }
-  unsub.value.open = true; // 확인 팝업 오픈
+  unsub.value.open = true;
 };
-
 const doUnsubscribe = async () => {
   errors.value.submit = undefined;
   saveInfo.value = undefined;
-
   try {
     isUnsubmitting.value = true;
     const resp = await unsubscribeMember(emailFromQuery.value!, token.value!);
     const success = resp?.isSuccess === true;
     if (success) {
       unsub.value.open = false;
-      // 완료 페이지로 이동 (이메일을 쿼리로 전달)
-      await router.push({ name: "unsubscribed", query: { email: emailFromQuery.value } });
+      await router.push({
+        name: "unsubscribed",
+        query: { email: emailFromQuery.value, token: token.value! }
+      });
     } else {
       errors.value.submit = resp?.message ?? "구독 취소에 실패했습니다.";
     }
@@ -611,7 +620,7 @@ const doUnsubscribe = async () => {
   }
 };
 
-/* ===== 칩 드래그 스크롤 (회사) ===== */
+/* 칩 드래그 스크롤 (회사) */
 const chipsRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
 const preparedForDrag = ref(false);
@@ -626,7 +635,6 @@ const isInteractive = (el: HTMLElement | null): boolean => {
   if (!el) return false;
   return !!el.closest('.chip-x, button, a, input, textarea, select, [role="button"], [contenteditable=""], .dropdown-toggle');
 };
-
 const onPointerDown = (e: PointerEvent) => {
   if (!chipsRef.value) return;
   if (e.button !== 0 && e.pointerType === "mouse") return;
@@ -638,7 +646,6 @@ const onPointerDown = (e: PointerEvent) => {
   moved = false;
   captured = false;
   pointerId = e.pointerId;
-
   startX = e.clientX;
   startScrollLeft = chipsRef.value.scrollLeft;
   chipsRef.value.classList.add("dragging");
@@ -671,7 +678,7 @@ const onChipsClickCapture = (e: Event) => {
   moved = false;
 };
 
-/* ===== 칩 드래그 스크롤 (카테고리) ===== */
+/* 칩 드래그 스크롤 (카테고리) */
 const chipsRef2 = ref<HTMLElement | null>(null);
 const isDragging2 = ref(false);
 const preparedForDrag2 = ref(false);
@@ -692,7 +699,6 @@ const onPointerDown2 = (e: PointerEvent) => {
   moved2 = false;
   captured2 = false;
   pointerId2 = e.pointerId;
-
   startX2 = e.clientX;
   startScrollLeft2 = chipsRef2.value.scrollLeft;
   chipsRef2.value.classList.add("dragging");
@@ -725,41 +731,50 @@ const onChipsClickCapture2 = (e: Event) => {
   moved2 = false;
 };
 
-/* ===== 초기 로드 ===== */
+/* 내비게이션 */
+const goHome = () => router.push("/");
+
+/* 재시도: 가드 초기화 후 다시 로드 */
+const retry = () => {
+  guard.reset();
+  loadInitial();
+};
+
+/* 초기 로드: 가드의 load()로 인증/에러 공통 처리 */
 const loadInitial = async () => {
-  try {
-    if (!hasValidParams.value) {
-      topError.value = "유효하지 않은 접근입니다. (필수 파라미터 누락: email 또는 token)";
-      return;
+  const me = await guard.load(async (email, token) => {
+
+    const resp = await getMySubscription(email, token);
+    if (!resp?.isSuccess || !resp?.data) {
+      throw new Error(resp?.message ?? "인증 검증에 실패했습니다.");
     }
-    isLoading.value = true;
 
     await Promise.all([loadMoreCompanies(), loadMoreCategories()]);
 
-    const resp = await getMySubscription(emailFromQuery.value!, token.value!);
-    if (!resp?.isSuccess || !resp?.data) {
-      throw new Error(resp?.message ?? "설정을 불러오지 못했습니다.");
-    }
-
-    const me = resp.data;
-    form.value.email = me.email ?? emailFromQuery.value ?? "";
-    form.value.nickname = me.nickname ?? "";
-    selected.value.companies = Array.isArray(me.companyIds) ? me.companyIds : [];
-    selected.value.categories = Array.isArray(me.categoryIds) ? me.categoryIds : [];
-
-    initialSnapshot.value = {
-      companies: [...selected.value.companies],
-      categories: [...selected.value.categories],
-      nickname: form.value.nickname ?? "",
+    return resp.data as {
+      email: string;
+      nickname: string;
+      companyIds: number[];
+      categoryIds: number[];
     };
+  });
 
-    validateCompanies();
-    validateCategories();
-  } catch (err: any) {
-    topError.value = err?.message ?? "설정을 불러오지 못했습니다.";
-  } finally {
-    isLoading.value = false;
-  }
+  // fatal이면 me가 undefined
+  if (!me) return;
+
+  form.value.email = me.email ?? emailFromQuery.value ?? "";
+  form.value.nickname = me.nickname ?? "";
+  selected.value.companies = Array.isArray(me.companyIds) ? me.companyIds : [];
+  selected.value.categories = Array.isArray(me.categoryIds) ? me.categoryIds : [];
+
+  initialSnapshot.value = {
+    companies: [...selected.value.companies],
+    categories: [...selected.value.categories],
+    nickname: form.value.nickname ?? "",
+  };
+
+  validateCompanies();
+  validateCategories();
 };
 
 onMounted(() => {
@@ -772,7 +787,7 @@ onMounted(() => {
 .page{ min-height: 90vh; background:#ffffff; display:flex; flex-direction:column; }
 .main{ flex:1; display:grid; place-items:center; padding: 40px 16px; }
 
-/* 패널 */
+/* ===== 기존 패널/폼 ===== */
 .panel{ position: relative; width: min(640px, 100%); background:#fff; border-radius: 16px; border: 1px solid #e9e9f1; box-shadow: 0 10px 30px rgba(20, 20, 33, .06); overflow: hidden; }
 .panel::before{ content:""; position:absolute; left:0; right:0; top:0; height:6px; background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%); }
 
@@ -815,7 +830,7 @@ onMounted(() => {
 .cb:checked + .box{ background:#4b42b9; border-color:#4b42b9; }
 .cb:checked + .box::after{ content:""; position:absolute; left:2.5px; top:2px; width:8px; height:4px; border:2px solid #fff; border-top:0; border-right:0; transform: rotate(-45deg); }
 
-/* 칩 (가로 스크롤/드래그) */
+/* 칩 */
 .chips{ width:100%; min-width:0; display:flex; flex-wrap:nowrap; gap:8px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; padding:6px 2px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; position:relative; user-select:none; touch-action:pan-x; scrollbar-width:none; -ms-overflow-style:none; }
 .chips::-webkit-scrollbar{ display:none; }
 .chips.dragging{ cursor:grabbing; }
@@ -836,7 +851,7 @@ onMounted(() => {
 .input.is-invalid, .dropdown.is-invalid .dropdown-toggle{ border-color:#d96060; box-shadow:0 0 0 3px rgba(217,96,96,.12); background:#fff7f7; }
 .field--email .input { color: #9a98aa; }
 
-/* 액션: 저장 전폭 + 하단 텍스트형 취소 */
+/* 액션 */
 .actions{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
 .primary{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(118,82,201,.0); background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%); color:#fff; font-weight:800; cursor:pointer; box-shadow: 0 10px 24px rgba(102,117,224,.24); transition: transform .15s ease, box-shadow .2s ease; }
 .primary:hover:not([disabled]){ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(102,117,224,.32); }
