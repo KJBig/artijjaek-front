@@ -11,7 +11,7 @@
       <!-- Primary -->
       <button class="btn btn-primary" @click="goRegister">구독하기</button>
       <!-- Ghost / Outline -->
-      <button class="btn btn-ghost">요청하기</button>
+      <button class="btn btn-ghost" @click="goRequest">요청하기</button>
     </nav>
   </header>
 </template>
@@ -22,7 +22,20 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const goRegister = () => router.push('/register');
 const goHome = () => router.push('/');
+
+/**
+ * ✅ 요청하기 버튼 클릭 시 .env의 VITE_REQUEST_URL 새 창으로 열기
+ */
+const goRequest = () => {
+  const url = import.meta.env.VITE_REQUEST_URL ?? "https://forms.gle/your-form-id";
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    console.warn('VITE_REQUEST_URL이 설정되지 않았습니다.');
+  }
+};
 </script>
+
 
 <style scoped>
 /* Color tokens (참고용 주석)
