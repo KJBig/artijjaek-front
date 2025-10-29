@@ -2,6 +2,7 @@
   <header class="header">
     <h1 class="logo" aria-label="아티짹">
       <button class="logo-btn" @click="goHome">
+        <img src="/main_logo.png" alt="아티짹 로고" class="logo-img" />
         <span class="logo-text">아티짹</span>
       </button>
     </h1>
@@ -48,23 +49,35 @@ const goHome = () => router.push('/');
 
 /* 로고 버튼(접근성/포커스 가능) */
 .logo { display:flex; align-items:center; }
-.logo-btn{
+.logo-btn {
   appearance: none;
   background: transparent;
   border: 0;
   padding: 0;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.logo-img {
+  height: 30px;
+  width: auto;
+  display: block;
+  transform: translateY(1px);
+}
+
 .logo-btn:focus-visible{
   outline: none;
   box-shadow: 0 0 0 3px rgba(118,82,201,.22);
   border-radius: 8px;
 }
 
-/* 그라데이션 텍스트 로고 - 사이즈 업 */
-.logo-text{
-  font-size:26px; /* ⬅️ 22px -> 26px */
-  font-weight:800; letter-spacing:.2px;
+.logo-text {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  line-height: 1; /* 🔥 텍스트 상하 여백 제거 */
   background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
   -webkit-background-clip: text;
   background-clip: text;
