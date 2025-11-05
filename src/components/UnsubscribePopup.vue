@@ -1,4 +1,3 @@
-<!-- src/components/UnsubscribePopup.vue -->
 <template>
   <Teleport to="body">
     <div
@@ -27,8 +26,6 @@
           >
             {{ cancelText }}
           </button>
-
-          <!-- 확인 클릭 시 라우팅/API는 부모가 처리하도록 이벤트만 emit -->
           <button
             type="button"
             class="btn"
@@ -40,13 +37,7 @@
           </button>
         </footer>
 
-        <button
-          class="x"
-          type="button"
-          aria-label="닫기"
-          title="닫기"
-          @click="onClose"
-        >✕</button>
+        <button class="x" type="button" aria-label="닫기" title="닫기" @click="onClose">✕</button>
       </div>
     </div>
   </Teleport>
@@ -55,6 +46,11 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from "vue";
 
+/**
+ * 경고 해결 포인트
+ * - cancelText, confirmText, busy 를 props 로 명시
+ * - Teleport 루트에서 attrs 상속이 안 되므로 props 선언이 필수
+ */
 const props = withDefaults(defineProps<{
   title?: string;
   message?: string;
@@ -69,15 +65,11 @@ const props = withDefaults(defineProps<{
   busy: false,
 });
 
-const emit = defineEmits<{
-  (e: "close"): void;
-  (e: "confirm"): void;
-}>();
+const emit = defineEmits<{ (e: "close"): void; (e: "confirm"): void }>();
 
 const popupRef = ref<HTMLElement | null>(null);
-const titleId = `popup-title-${Math.random().toString(36).slice(2, 8)}`;
+const titleId = `popup-title-${Math.random().toString(36).slice(2, 7)}`;
 
-/** 포커스 트랩 & 스크롤 잠금 */
 const trapFocus = () => {
   if (!popupRef.value) return;
   if (!popupRef.value.contains(document.activeElement)) {
@@ -94,7 +86,6 @@ const preventScroll = (enable: boolean) => {
 
 onMounted(() => {
   preventScroll(true);
-  // 팝업 열리면 내부로 포커스 이동
   setTimeout(() => popupRef.value?.focus(), 0);
   window.addEventListener("focus", trapFocus, true);
 });
@@ -104,7 +95,6 @@ onBeforeUnmount(() => {
   window.removeEventListener("focus", trapFocus, true);
 });
 
-/** 이벤트 */
 const onClose = () => emit("close");
 const onConfirm = () => emit("confirm");
 </script>
@@ -130,7 +120,6 @@ const onConfirm = () => emit("confirm");
 .body{ padding: 0 20px 12px; color:#2a2733; }
 .message{ margin: 0; line-height: 1.6; }
 .foot{ padding: 12px 20px 20px; display:flex; gap:8px; justify-content:flex-end; }
-
 .btn{
   padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(118,82,201,.0);
   background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
@@ -147,7 +136,6 @@ const onConfirm = () => emit("confirm");
   box-shadow: none;
 }
 .btn-ghost:hover{ background:#eeecfb; }
-
 .x{
   position:absolute; top:8px; right:8px; border:0; background:transparent; cursor:pointer;
   color:#6e6a7e; font-size:18px; line-height:1; padding:6px; border-radius:8px;
