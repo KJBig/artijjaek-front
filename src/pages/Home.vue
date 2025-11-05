@@ -7,31 +7,32 @@
           한국 IT 기업의 최신 기술 글을 한눈에.<br />
           구독으로 놓치지 마세요.
         </p>
-        <button class="cta" @click="onSubscribe">구독 시작하기</button>
+        <button class="cta" @click="goRegister">
+          구독 시작하기
+        </button>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-const onSubscribe = (): void => {
-  alert("구독하기 버튼 클릭됨!");
-};
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+const goRegister = () => router.push('/register');
 </script>
 
 <style scoped>
-/* 전체 배경: 따뜻한 아이보리톤 */
 .page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100svh;
   width: 100%;
-  background: linear-gradient(135deg, #f9f7f3 0%, #f0ece6 100%);
-  color: #3c3c3c;
+  background: #ffffff; /* ✅ 흰색 배경 */
+  color: #222222;
   font-family: 'Pretendard', sans-serif;
 }
 
-/* 메인 콘텐츠 중앙 배치 */
 .main {
   flex: 1;
   display: flex;
@@ -43,39 +44,56 @@ const onSubscribe = (): void => {
   text-align: center;
   max-width: 600px;
   padding: 20px;
+  transform: translateY(-10vh);
 }
 
 .title {
   font-size: 40px;
   font-weight: 700;
-  color: #3b332c; /* 부드러운 진한 브라운 */
+  color: #4b4b4b; /* 짙은 회색으로 대비 */
   margin-bottom: 16px;
 }
 
 .desc {
   font-size: 18px;
   line-height: 1.6;
-  color: #6a5f55; /* 따뜻한 중간 브라운 */
+  color: #666666;
   margin-bottom: 32px;
 }
 
-/* CTA 버튼: 크림 + 브라운 포인트 */
+/* ✅ 시그니처 컬러 기반 버튼 */
 .cta {
-  background-color: #e7d7c1;
-  color: #3b332c;
-  border: 1px solid #d4c2a6;
+  background: linear-gradient(135deg, #6675e0 0%, #7652c9 100%);
+  color: #ffffff;
+  border: none;
   border-radius: 14px;
-  padding: 14px 28px;
+  padding: 14px 32px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(102, 117, 224, 0.25);
 }
 
+/* ✅ hover 시 좀 더 밝게 */
 .cta:hover {
-  background-color: #d4c2a6;
-  border-color: #bca98c;
+  background: linear-gradient(135deg, #7684f0 0%, #8863d8 100%);
   transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 117, 224, 0.35);
+}
+
+/* ✅ 작은 화면 대응 */
+@media (max-width: 640px) {
+  .title {
+    font-size: 32px;
+  }
+
+  .desc {
+    font-size: 16px;
+  }
+
+  .content {
+    transform: translateY(-6vh);
+  }
 }
 </style>
