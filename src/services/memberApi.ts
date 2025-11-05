@@ -75,7 +75,7 @@ export async function getMySubscription(email: string, token: string) {
     // 서버 응답 래핑 형태가 { data: ... } 일 수도 있으므로 그대로 반환
     return await res.json();
   } catch (err) {
-    console.error("[subscribeMember] Error:", err);
+    console.error("[getMySubscription] Error:", err);
     throw err; // 컴포넌트에서 try/catch로 처리
   }
 }
@@ -101,7 +101,7 @@ export async function updateMySubscription(payload: ChangeSubscribeMemberPayload
     // 서버 응답 래핑 형태가 { data: ... } 일 수도 있으므로 그대로 반환
     return await res.json();
   } catch (err) {
-    console.error("[subscribeMember] Error:", err);
+    console.error("[updateMySubscription] Error:", err);
     throw err; // 컴포넌트에서 try/catch로 처리
   }
 }
@@ -127,7 +127,7 @@ export async function unsubscribeMember(payload: UnsubscriptionMemberPaload) {
     // 서버 응답 래핑 형태가 { data: ... } 일 수도 있으므로 그대로 반환
     return await res.json();
   } catch (err) {
-    console.error("[subscribeMember] Error:", err);
+    console.error("[unsubscribeMember] Error:", err);
     throw err; // 컴포넌트에서 try/catch로 처리
   }
 }

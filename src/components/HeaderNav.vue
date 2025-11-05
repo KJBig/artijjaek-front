@@ -11,7 +11,7 @@
       <!-- Primary -->
       <button class="btn btn-primary" @click="goRegister">구독하기</button>
       <!-- Ghost / Outline -->
-      <button class="btn btn-ghost" @click="goRequest">요청하기</button>
+      <button class="btn btn-ghost" @click="goInquiry">문의하기</button>
     </nav>
   </header>
 </template>
@@ -24,43 +24,26 @@ const goRegister = () => router.push('/register');
 const goHome = () => router.push('/');
 
 /**
- * ✅ 요청하기 버튼 클릭 시 .env의 VITE_REQUEST_URL 새 창으로 열기
+ * ✅ 요청하기 버튼 클릭 시 /inquiry 페이지로 이동
  */
-const goRequest = () => {
-  const url = import.meta.env.VITE_REQUEST_URL ?? "https://forms.gle/your-form-id";
-  if (url) {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  } else {
-    console.warn('VITE_REQUEST_URL이 설정되지 않았습니다.');
-  }
+const goInquiry = () => {
+  router.push('/inquiry');
 };
 </script>
 
-
 <style scoped>
-/* Color tokens (참고용 주석)
-   primary-start: #6675E0
-   primary-end:   #7652C9
-   primary-mid:   #6F63D4
-*/
-
 .header{
   position: sticky;
   top: 0;
   z-index: 3000;
   display:flex; justify-content:space-between; align-items:center;
   height:72px; padding:0 64px;
-
-  /* 🔳 화이트 + 살짝 유리효과로 메인 그라데이션 위에서도 잘 어울리게 */
   background: rgba(255,255,255,0.86);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-
-  /* 보라 계열 라인 */
   border-bottom: 1px solid rgba(118, 82, 201, 0.18);
 }
 
-/* 로고 버튼(접근성/포커스 가능) */
 .logo { display:flex; align-items:center; }
 .logo-btn {
   appearance: none;
@@ -90,7 +73,7 @@ const goRequest = () => {
   font-size: 26px;
   font-weight: 800;
   letter-spacing: .2px;
-  line-height: 1; /* 🔥 텍스트 상하 여백 제거 */
+  line-height: 1;
   background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -99,7 +82,6 @@ const goRequest = () => {
 
 .nav{ display:flex; gap:12px; }
 
-/* 공통 버튼 */
 .btn{
   font-size:14px; font-weight:700; cursor:pointer;
   border-radius:10px; padding:10px 20px;
@@ -107,7 +89,6 @@ const goRequest = () => {
   outline: none;
 }
 
-/* Primary: 보라 그라데이션 솔리드 */
 .btn-primary{
   color:#fff;
   border: 1px solid rgba(118,82,201,.0);
@@ -122,10 +103,9 @@ const goRequest = () => {
   box-shadow: 0 0 0 3px rgba(118,82,201,.22);
 }
 
-/* Ghost: 화이트 바탕 + 보라 라인 */
 .btn-ghost{
   background:#fff;
-  color:#5746c7; /* mid 톤 */
+  color:#5746c7;
   border:1px solid rgba(118,82,201,.35);
 }
 .btn-ghost:hover{
@@ -137,10 +117,9 @@ const goRequest = () => {
   box-shadow: 0 0 0 3px rgba(118,82,201,.18);
 }
 
-/* 반응형 */
 @media (max-width: 768px){
   .header{ padding:0 20px; }
-  .logo-text{ font-size:24px; } /* 모바일에서도 기존보다 크게 */
+  .logo-text{ font-size:24px; }
   .btn{ padding:9px 14px; }
 }
 </style>
