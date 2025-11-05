@@ -3,15 +3,17 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const Home = () => import('../pages/Home.vue')
 const Register = () => import('../pages/Register.vue')
-const Settings = () => import('../pages/Settings.vue')
-const Unsubscribed = () => import('../pages/Unsubscribed.vue')
+const Setting = () => import('../pages/Setting.vue')
+const Unsubscription = () => import('../pages/Unsubscription.vue')
+const Thankyou = () => import('../pages/Thankyou.vue')
 const NotFound = () => import('../pages/NotFound.vue')
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'home', component: Home },
   { path: '/register', name: 'register', component: Register },
-  { path: '/settings', name: 'settings', component: Settings },
-  { path: '/unsubscribed', name: 'unsubscribed', component: Unsubscribed },
+  { path: '/setting', name: 'setting', component: Setting },
+  { path: '/unsubscription', name: 'unsubscription', component: Unsubscription },
+  { path: '/thankyou', name: 'thankyou', component: Thankyou },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 

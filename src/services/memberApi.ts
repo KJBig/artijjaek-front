@@ -22,6 +22,13 @@ export interface ChangeSubscribeMemberPayload {
   token: string;
 }
 
+export interface UnsubscriptionMemberPaload {
+  email: string;
+  token: string;
+  reason: string;
+  detail: string;
+}
+
 export async function subscribeMember(payload: SubscribeMemberPayload) {
   try {
     const res = await fetch(`${BASE_URL}/api/v1/member/register`, {
@@ -75,7 +82,7 @@ export async function getMySubscription(email: string, token: string) {
 
 export async function updateMySubscription(payload: ChangeSubscribeMemberPayload) {
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/member/subscription/change`, {
+    const res = await fetch(`${BASE_URL}/api/v1/member/subscription`, {
       method: "PUT",
       headers: jsonHeaders,
       body: JSON.stringify(payload),
@@ -99,11 +106,12 @@ export async function updateMySubscription(payload: ChangeSubscribeMemberPayload
   }
 }
 
-export async function unsubscribeMember(email: string, token: string) {
+export async function unsubscribeMember(payload: UnsubscriptionMemberPaload) {
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/member/subscription?email=${email}&token=${token}`, {
-      method: "DELETE",
-      headers: jsonHeaders
+    const res = await fetch(`${BASE_URL}/api/v1/member/unsubscription`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {

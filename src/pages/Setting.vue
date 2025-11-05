@@ -1,7 +1,7 @@
-<!-- src/pages/Settings.vue -->
+<!-- src/pages/Setting.vue -->
 <template>
   <div class="page">
-    <!-- ✅ 인증 오류: 공통 패널로 처리 -->
+    <!-- 인증 오류 -->
     <main class="main" v-if="guard.fatal.value">
       <AuthErrorPanel
         :title="'인증 정보가 유효하지 않습니다'"
@@ -14,7 +14,7 @@
       />
     </main>
 
-    <!-- ✅ 정상 화면 -->
+    <!-- 정상 화면 -->
     <main class="main" v-else>
       <section class="panel" role="form" aria-labelledby="page-title">
         <header class="panel-head">
@@ -23,7 +23,7 @@
         </header>
 
         <div class="panel-body">
-          <!-- ================= 회사 선택 ================= -->
+          <!-- ================= 회사 ================= -->
           <div class="field">
             <span class="label">회사 <small>중복 선택 가능</small></span>
 
@@ -35,7 +35,7 @@
                 :aria-expanded="openDropdown ? 'true' : 'false'"
                 aria-haspopup="listbox"
                 @click="toggleDropdown"
-                :disabled="!guard.hasValidParams || guard.isLoading"
+                :disabled="isSubmitting"
               >
                 <span v-if="selected.companies.length === 0" class="placeholder">선택하세요</span>
                 <span v-else class="summary">{{ selected.companies.length }}개 선택됨</span>
@@ -79,7 +79,7 @@
 
             <p v-if="errors.companies" class="error-text">{{ errors.companies }}</p>
 
-            <!-- 칩 (회사) -->
+            <!-- 칩 -->
             <div
               class="chips"
               ref="chipsRef"
@@ -116,7 +116,7 @@
                 :aria-expanded="openCategoryDropdown ? 'true' : 'false'"
                 aria-haspopup="listbox"
                 @click="toggleCategoryDropdown"
-                :disabled="!guard.hasValidParams || guard.isLoading"
+                :disabled="isSubmitting"
               >
                 <span v-if="selected.categories.length === 0" class="placeholder">선택하세요</span>
                 <span v-else class="summary">{{ selected.categories.length }}개 선택됨</span>
@@ -210,12 +210,12 @@
               :class="{ 'is-invalid': errors.nickname }"
               placeholder="예: 준커"
               @blur="validateNickname"
-              :disabled="!guard.hasValidParams || guard.isLoading"
+              :disabled="isSubmitting"
             />
             <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
           </div>
 
-          <!-- 액션: 저장(전폭) + 하단 텍스트 '구독 취소' -->
+          <!-- 액션 -->
           <div class="actions">
             <button
               class="primary"
@@ -228,34 +228,30 @@
               <span v-else>저장</span>
             </button>
 
+            <!-- ✅ 팝업 대신 라우팅 -->
             <button
               class="link-danger"
               type="button"
-              :disabled="isUnsubmitting || !guard.hasValidParams"
-              @click="openUnsubscribePopup"
+              :disabled="!guard.hasValidParams"
+              @click="goUnsubscribeFlow"
               title="구독 취소"
             >
-              <span v-if="isUnsubmitting">처리 중…</span>
-              <span v-else>구독 취소</span>
+              구독 취소
             </button>
           </div>
 
-          <!-- 공통 에러/알림 -->
+          <!-- 공통 에러 -->
           <p v-if="errors.submit" class="submit-error" role="alert">{{ errors.submit }}</p>
-          <p v-if="saveInfo" class="save-info" role="status">{{ saveInfo }}</p>
         </div>
       </section>
 
-      <!-- ✅ 구독 취소 확인 팝업 -->
-      <UnsubscribePopup
-        v-if="unsub.open"
-        :title="'구독을 취소할까요?'"
-        :message="'더 이상 아티짹 이메일 소식을 보내지 않아요.'"
-        :confirm-text="'네, 취소할게요'"
-        :cancel-text="'유지할게요'"
-        :busy="isUnsubmitting"
-        @close="unsub.open = false"
-        @confirm="doUnsubscribe"
+      <!-- 저장 성공 팝업 (현재 페이지 유지) -->
+      <SuccessPopup
+        v-if="successPopup.open"
+        :title="successPopup.title"
+        :message="successPopup.message"
+        :redirect-to="null"
+        @close="onCloseSuccessPopup"
       />
     </main>
   </div>
@@ -263,45 +259,40 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import AuthErrorPanel from "../components/AuthErrorPanel.vue";
+import SuccessPopup from "../components/SuccessPopup.vue";
 import { useAuthGuard } from "../composables/useAuthGuard.ts";
 import { fetchCompaniesPage as fetchCompanyPage, fetchAllCompanies, type Company } from "../services/companyApi";
 import { fetchCategoriesPage as fetchCategoryPage } from "../services/categoryApi";
-import { getMySubscription, updateMySubscription, unsubscribeMember } from "../services/memberApi";
-import UnsubscribePopup from "../components/UnsubscribePopup.vue";
+import { getMySubscription, updateMySubscription } from "../services/memberApi";
 
-/** 카테고리 타입 */
 type Category = { id: number; name: string; image?: string };
 
-/* 라우팅/가드 */
-const route = useRoute();
 const router = useRouter();
 const guard = useAuthGuard();
 
 const token = guard.token;
 const emailFromQuery = guard.email;
 
-/* 제출/진행 상태 */
 const isSubmitting = ref(false);
-const isUnsubmitting = ref(false);
 
-/* 알림 */
-const saveInfo = ref<string | undefined>(undefined);
+const successPopup = ref<{ open: boolean; title: string; message: string }>({
+  open: false,
+  title: "저장 완료",
+  message: "변경 사항이 저장되었습니다.",
+});
 
-/* 폼 상태 */
 const form = ref({ email: "", nickname: "" });
 const options = ref<{ companies: Company[]; categories: Category[] }>({ companies: [], categories: [] });
 const selected = ref<{ companies: number[]; categories: number[] }>({ companies: [], categories: [] });
 
-/* 초기 스냅샷 (dirty 체크용) */
 const initialSnapshot = ref<{ companies: number[]; categories: number[]; nickname: string }>({
   companies: [],
   categories: [],
   nickname: "",
 });
 
-/* 유틸 */
 const sameArray = (a: number[], b: number[]) => {
   if (a.length !== b.length) return false;
   const as = [...a].sort((x, y) => x - y);
@@ -336,14 +327,14 @@ const menuRefCat = ref<HTMLElement | null>(null);
 const toggleRefCat = ref<HTMLElement | null>(null);
 let observerCat: IntersectionObserver | null = null;
 
-/* 드롭다운 열림 */
+/* 드롭다운 상태 */
 const openDropdown = ref(false);
 const openCategoryDropdown = ref(false);
 
 /* 에러 */
 const errors = ref<{ companies?: string; categories?: string; nickname?: string; submit?: string }>({});
 
-/* computed map */
+/* 맵 */
 const allCompanyIds = computed(() => options.value.companies.map((c) => c.id));
 const isAllSelectedCompanies = computed(
   () => allCompanyIds.value.length > 0 && selected.value.companies.length === allCompanyIds.value.length
@@ -363,7 +354,7 @@ const categoryById = computed(() => {
   return m;
 });
 
-/* 드롭다운 제어 (회사) */
+/* 회사 드롭다운 */
 const onWindowClickCompanies = (e: MouseEvent) => {
   const t = e.target as Node;
   if (menuRef.value?.contains(t) || toggleRef.value?.contains(t)) return;
@@ -371,7 +362,6 @@ const onWindowClickCompanies = (e: MouseEvent) => {
   cleanupDropdownCompanies();
 };
 const toggleDropdown = async () => {
-  if (!guard.hasValidParams.value || guard.isLoading.value) return;
   openDropdown.value = !openDropdown.value;
   if (openDropdown.value) {
     if (options.value.companies.length === 0) await loadMoreCompanies();
@@ -394,7 +384,7 @@ const cleanupDropdownCompanies = () => {
   window.removeEventListener("click", onWindowClickCompanies, { capture: true } as any);
 };
 
-/* 드롭다운 제어 (카테고리) */
+/* 카테고리 드롭다운 */
 const onWindowClickCategories = (e: MouseEvent) => {
   const t = e.target as Node;
   if (menuRefCat.value?.contains(t) || toggleRefCat.value?.contains(t)) return;
@@ -402,7 +392,6 @@ const onWindowClickCategories = (e: MouseEvent) => {
   cleanupDropdownCategories();
 };
 const toggleCategoryDropdown = async () => {
-  if (!guard.hasValidParams.value || guard.isLoading.value) return;
   openCategoryDropdown.value = !openCategoryDropdown.value;
   if (openCategoryDropdown.value) {
     if (options.value.categories.length === 0) await loadMoreCategories();
@@ -548,7 +537,6 @@ const removeCategory = (id: number) => {
 /* 저장 */
 const save = async () => {
   errors.value.submit = undefined;
-  saveInfo.value = undefined;
 
   if (!guard.hasValidParams.value) {
     errors.value.submit = "유효하지 않은 접근입니다. (필수 파라미터 누락)";
@@ -570,7 +558,11 @@ const save = async () => {
     const resp = await updateMySubscription(payload);
     const ok = resp?.isSuccess === true;
     if (ok) {
-      saveInfo.value = "저장되었습니다.";
+      successPopup.value = {
+        open: true,
+        title: "저장 완료",
+        message: "변경 사항이 저장되었습니다.",
+      };
       initialSnapshot.value = {
         companies: [...selected.value.companies],
         categories: [...selected.value.categories],
@@ -586,38 +578,17 @@ const save = async () => {
   }
 };
 
-/* 구독 취소 */
-const unsub = ref<{ open: boolean }>({ open: false });
-const openUnsubscribePopup = () => {
-  errors.value.submit = undefined;
-  saveInfo.value = undefined;
+const onCloseSuccessPopup = () => {
+  successPopup.value.open = false;
+};
+
+/* ✅ 구독 취소 플로우 진입: 안내 페이지로 이동 */
+const goUnsubscribeFlow = () => {
   if (!guard.hasValidParams.value) {
     errors.value.submit = "유효하지 않은 접근입니다. (필수 파라미터 누락)";
     return;
   }
-  unsub.value.open = true;
-};
-const doUnsubscribe = async () => {
-  errors.value.submit = undefined;
-  saveInfo.value = undefined;
-  try {
-    isUnsubmitting.value = true;
-    const resp = await unsubscribeMember(emailFromQuery.value!, token.value!);
-    const success = resp?.isSuccess === true;
-    if (success) {
-      unsub.value.open = false;
-      await router.push({
-        name: "unsubscribed",
-        query: { email: emailFromQuery.value, token: token.value! }
-      });
-    } else {
-      errors.value.submit = resp?.message ?? "구독 취소에 실패했습니다.";
-    }
-  } catch (err: any) {
-    errors.value.submit = err?.message ?? "구독 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-  } finally {
-    isUnsubmitting.value = false;
-  }
+  router.push({ name: "unsubscription", query: { email: emailFromQuery.value, token: token.value! } });
 };
 
 /* 칩 드래그 스크롤 (회사) */
@@ -630,7 +601,6 @@ let startScrollLeft = 0;
 let moved = false;
 let captured = false;
 const DRAG_THRESHOLD = 3;
-
 const isInteractive = (el: HTMLElement | null): boolean => {
   if (!el) return false;
   return !!el.closest('.chip-x, button, a, input, textarea, select, [role="button"], [contenteditable=""], .dropdown-toggle');
@@ -687,7 +657,6 @@ let startX2 = 0;
 let startScrollLeft2 = 0;
 let moved2 = false;
 let captured2 = false;
-
 const onPointerDown2 = (e: PointerEvent) => {
   if (!chipsRef2.value) return;
   if (e.button !== 0 && e.pointerType === "mouse") return;
@@ -734,16 +703,15 @@ const onChipsClickCapture2 = (e: Event) => {
 /* 내비게이션 */
 const goHome = () => router.push("/");
 
-/* 재시도: 가드 초기화 후 다시 로드 */
+/* 재시도 */
 const retry = () => {
   guard.reset();
   loadInitial();
 };
 
-/* 초기 로드: 가드의 load()로 인증/에러 공통 처리 */
+/* 초기 로드 */
 const loadInitial = async () => {
   const me = await guard.load(async (email, token) => {
-
     const resp = await getMySubscription(email, token);
     if (!resp?.isSuccess || !resp?.data) {
       throw new Error(resp?.message ?? "인증 검증에 실패했습니다.");
@@ -759,7 +727,6 @@ const loadInitial = async () => {
     };
   });
 
-  // fatal이면 me가 undefined
   if (!me) return;
 
   form.value.email = me.email ?? emailFromQuery.value ?? "";
@@ -787,7 +754,7 @@ onMounted(() => {
 .page{ min-height: 90vh; background:#ffffff; display:flex; flex-direction:column; }
 .main{ flex:1; display:grid; place-items:center; padding: 40px 16px; }
 
-/* ===== 기존 패널/폼 ===== */
+/* 패널 */
 .panel{ position: relative; width: min(640px, 100%); background:#fff; border-radius: 16px; border: 1px solid #e9e9f1; box-shadow: 0 10px 30px rgba(20, 20, 33, .06); overflow: hidden; }
 .panel::before{ content:""; position:absolute; left:0; right:0; top:0; height:6px; background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%); }
 
@@ -862,7 +829,7 @@ onMounted(() => {
   padding: 0;
   background: none;
   border: none;
-  color: #8a86a0; /* hint 톤 */
+  color: #8a86a0;
   font-size: 12px;
   font-weight: 400;
   cursor: pointer;
@@ -871,10 +838,9 @@ onMounted(() => {
 }
 .link-danger[disabled]{ opacity: .6; cursor: not-allowed; text-decoration: none; }
 
-/* 에러/알림 */
+/* 에러 */
 .error-text{ color:#b73737; font-size:13px; }
 .submit-error{ color:#b03030; font-size:13px; }
-.save-info{ color:#2f7a2f; font-size:13px; }
 
 /* 반응형 */
 @media (max-width: 640px){
