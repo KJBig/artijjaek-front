@@ -112,7 +112,7 @@
           >
             확인
           </button>
-          <router-link class="btn btn--secondary" :to="{ name: 'settings', query: { email, token } }">
+          <router-link class="btn btn--secondary" :to="{ name: 'setting', query: { email, token } }">
             설정으로 돌아가기
           </router-link>
         </footer>
@@ -300,8 +300,11 @@ onMounted(async () => {
   border: 1px solid rgba(118, 82, 201, 0.12);
   border-radius: 12px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
 }
-.inner-info { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .row { display: flex; gap: 8px; }
 .label { font-weight: 700; color: #2a2733; }
 .value { font-weight: 700; color: #1f1f2b; }
