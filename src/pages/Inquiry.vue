@@ -150,7 +150,7 @@ const goHome = () => router.push("/");
   color: #1f1f2b;
   caret-color: #4b42b9;
 }
-.textarea { resize: vertical; }
+.textarea { resize: none; }
 .input::placeholder { color: #8a86a0; }
 .count { text-align: right; font-size: 12px; color: #8a86a0; margin-top: 4px; }
 
