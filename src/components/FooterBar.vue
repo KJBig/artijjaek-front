@@ -36,7 +36,7 @@
         <!-- ETC -->
         <div class="row">
           <strong class="group">ETC</strong>
-          <a href="https://google.com" class="link">서비스 피드백</a>
+          <a href="https://forms.gle/jBLyotpvuaXweZbe7" class="link">서비스 피드백</a>
         </div>
       </nav>
     </div>
