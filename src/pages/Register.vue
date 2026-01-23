@@ -203,7 +203,7 @@
                 type="email"
                 class="input"
                 :class="{ 'is-invalid': errors.email }"
-                placeholder="artijjaek.dev@gmail.com"
+                placeholder="ex) example@email.com"
                 @blur="validateEmail"
               />
             </div>
@@ -219,7 +219,7 @@
               type="text"
               class="input"
               :class="{ 'is-invalid': errors.nickname }"
-              placeholder="예: 준커"
+              placeholder="ex) 준커"
               @blur="validateNickname"
             />
             <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
@@ -556,9 +556,10 @@ const submit = async () => {
       // ✅ 성공: 팝업 열고, 폼/선택 초기화
       popup.value = {
         open: true,
-        title: "구독 등록 완료 ✅",
+        title: "구독 등록 완료",
         message: "곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!"
       };
+
       resetFormAndSelection();
     } else {
       // ❌ 실패: 버튼 아래 빨간 글씨로 출력 (message 없으면 HTTP status)

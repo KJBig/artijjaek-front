@@ -21,7 +21,7 @@
               class="input"
               type="email"
               v-model.trim="email"
-              placeholder="example@email.com"
+              placeholder="ex) example@email.com"
               :disabled="busy"
               autocomplete="email"
               required
