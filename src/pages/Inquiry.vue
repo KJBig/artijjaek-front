@@ -13,6 +13,23 @@
 
         <section class="contact-group">
           <div class="field">
+            <label class="label" for="contact-email">
+              이메일 <small>(답변 받을 주소)</small>
+            </label>
+            <input
+              id="contact-email"
+              class="input"
+              type="email"
+              v-model.trim="email"
+              placeholder="ex) example@email.com"
+              :disabled="busy"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <!-- 문의 내용 -->
+          <div class="field">
             <label class="label" for="contact-message">문의 내용 <small>(1000자 이내)</small></label>
             <textarea
               id="contact-message"
@@ -58,13 +75,19 @@ import { useRouter } from "vue-router";
 import { postInquiry } from "../services/inquiryApi.ts";
 
 const router = useRouter();
+
+const email = ref(""); // ✅ 추가
 const message = ref("");
 const busy = ref(false);
 const showPopup = ref(false);
 
 const isSubmitDisabled = computed(() => {
-  const len = message.value.trim().length;
-  return busy.value || len < 1 || len > 1000;
+  const msgLen = message.value.trim().length;
+
+  // ✅ 간단 이메일 형식 검증
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+
+  return busy.value || !emailValid || msgLen < 1 || msgLen > 1000;
 });
 
 const onSubmit = async () => {
@@ -72,9 +95,12 @@ const onSubmit = async () => {
   busy.value = true;
 
   try {
-    // ✅ API 스펙에 맞춰 content 필드로 전송
-    const resp = await postInquiry({ content: message.value.trim() });
-    // 서버 래핑 응답 형식에 맞춰 성공 여부 체크
+    // ✅ email + content 전송
+    const resp = await postInquiry({
+      email: email.value.trim(),
+      content: message.value.trim(),
+    });
+
     if (resp?.isSuccess === true) {
       showPopup.value = true;
     } else {
@@ -126,9 +152,20 @@ const goHome = () => router.push("/");
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 }
-.head { text-align: center; }
-.title { margin: 8px 0 4px; font-size: 22px; font-weight: 800; color: #1f1f2b; }
-.desc { margin: 0; color: #6e6a7e; line-height: 1.6; }
+.head {
+  text-align: center;
+}
+.title {
+  margin: 8px 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1f1f2b;
+}
+.desc {
+  margin: 0;
+  color: #6e6a7e;
+  line-height: 1.6;
+}
 
 .contact-group {
   margin-top: 20px;
@@ -150,11 +187,28 @@ const goHome = () => router.push("/");
   color: #1f1f2b;
   caret-color: #4b42b9;
 }
-.textarea { resize: vertical; }
-.input::placeholder { color: #8a86a0; }
-.count { text-align: right; font-size: 12px; color: #8a86a0; margin-top: 4px; }
 
-.foot { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+/* ✅ textarea 크기 조절 불가 */
+.textarea {
+  resize: none;
+}
+
+.input::placeholder {
+  color: #8a86a0;
+}
+.count {
+  text-align: right;
+  font-size: 12px;
+  color: #8a86a0;
+  margin-top: 4px;
+}
+
+.foot {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
 .btn {
   padding: 10px 14px;
   border-radius: 10px;
@@ -162,8 +216,13 @@ const goHome = () => router.push("/");
   border: 1px solid #dcd9f1;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
-.btn:hover:not([disabled]) { transform: translateY(-1px); }
-.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.btn:hover:not([disabled]) {
+  transform: translateY(-1px);
+}
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .btn--primary {
   background: linear-gradient(135deg, #6675e0 0%, #7652c9 100%);
   color: #fff;
@@ -191,5 +250,13 @@ const goHome = () => router.push("/");
   margin-bottom: 16px;
   font-weight: 600;
   color: #2a2733;
+}
+.label {
+  color: #1f1f2b;
+  font-weight: 600;
+}
+.label small {
+  color: #000;
+  font-weight: 400;
 }
 </style>

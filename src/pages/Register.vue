@@ -203,7 +203,7 @@
                 type="email"
                 class="input"
                 :class="{ 'is-invalid': errors.email }"
-                placeholder="artijjaek.dev@gmail.com"
+                placeholder="ex) example@email.com"
                 @blur="validateEmail"
               />
             </div>
@@ -219,7 +219,7 @@
               type="text"
               class="input"
               :class="{ 'is-invalid': errors.nickname }"
-              placeholder="예: 준커"
+              placeholder="ex) 준커"
               @blur="validateNickname"
             />
             <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
@@ -246,7 +246,7 @@
         v-if="popup.open"
         :title="popup.title"
         :message="popup.message"
-        :redirect-to="'/'"
+        :redirect-to="popup.redirectTo"
         @close="popup.open = false"
       />
     </main>
@@ -270,7 +270,7 @@ const selected = ref<{ companies: number[]; categories: number[] }>({ companies:
 const isSubmitting = ref(false);
 
 /* ✅ 팝업 상태 */
-const popup = ref<{ open: boolean; title: string; message: string }>({
+const popup = ref<{ open: boolean; title: string; message: string, redirectTo?: string }>({
   open: false,
   title: "구독 등록 완료",
   message: "구독 등록이 완료되었습니다.\n 곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!",
@@ -531,42 +531,75 @@ const submit = async () => {
     if (resp && typeof resp === "object" && "ok" in resp && "status" in resp) {
       const httpStatus = resp.status as number;
       let data: any = null;
-      try { data = await resp.json(); } catch { /* body가 없을 수도 있음 */ }
+      try { data = await resp.json(); } catch {}
       return {
-        isSuccess: Boolean(data?.isSuccess),
+        ok: Boolean(resp.ok),                // ✅ 2xx 여부
+        isSuccess: Boolean(data?.isSuccess), // 서버 바디 기준 성공 플래그
         message: data?.message,
         httpStatus,
       };
     }
+
     // 2) JSON으로 { isSuccess, message, status } 형태가 오는 경우
+    const httpStatus = resp?.status ?? resp?._httpStatus;
     return {
+      ok: typeof httpStatus === "number" ? httpStatus >= 200 && httpStatus < 300 : Boolean(resp?.isSuccess),
       isSuccess: Boolean(resp?.isSuccess),
       message: resp?.message,
-      httpStatus: resp?.status ?? resp?._httpStatus,
+      httpStatus,
     };
   };
+
+  const openSuccessPopup = () => {
+  popup.value = {
+    open: true,
+    title: "구독 등록 완료",
+    message: "곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!",
+    redirectTo: "/",
+  };
+};
+
+const openErrorPopup = (msg: string) => {
+  popup.value = {
+    open: true,
+    title: "구독 등록 실패",
+    message: msg,
+    redirectTo: undefined, // ✅ 실패면 이동 안 함
+  };
+};
+
 
   try {
     isSubmitting.value = true;
 
     const raw = await subscribeMember(payload);
-    const { isSuccess, message, httpStatus } = await normalize(raw);
+    const { ok, isSuccess, message, httpStatus } = await normalize(raw);
 
-    if (isSuccess) {
-      // ✅ 성공: 팝업 열고, 폼/선택 초기화
-      popup.value = {
-        open: true,
-        title: "구독 등록 완료 ✅",
-        message: "곧 안내 메일이 도착할 예정이니 메일을 확인해주세요!"
-      };
-      resetFormAndSelection();
-    } else {
-      // ❌ 실패: 버튼 아래 빨간 글씨로 출력 (message 없으면 HTTP status)
-      const fallback = httpStatus ? `요청이 실패했습니다. (HTTP ${httpStatus})` : "요청이 실패했습니다.";
-      errors.value.submit = message ?? fallback;
+    // ✅ 200(2xx) 이외면 무조건 팝업으로 알림
+    if (!ok) {
+      const msg =
+        message ??
+        (httpStatus ? `요청이 실패했습니다. (HTTP ${httpStatus})` : "요청이 실패했습니다.");
+      openErrorPopup(msg);
+      return;
     }
+
+    // ✅ 2xx인데도 isSuccess=false인 케이스도 팝업으로 처리(원하면 유지/변경 가능)
+    if (!isSuccess) {
+      const msg = message ?? "요청이 실패했습니다.";
+      openErrorPopup(msg);
+      return;
+    }
+
+    // ✅ 성공: 팝업 열고 초기화
+    openSuccessPopup();
+    resetFormAndSelection();
+
   } catch (err: any) {
-    errors.value.submit = err?.message ?? "구독 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    // 네트워크/예외도 팝업으로
+    openErrorPopup(
+      err?.message ?? "구독 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+    );
   } finally {
     isSubmitting.value = false;
   }

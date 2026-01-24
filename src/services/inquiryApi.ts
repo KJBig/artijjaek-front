@@ -8,6 +8,7 @@ export type ApiResponse<T = unknown> = {
 };
 
 export interface InquiryPaload {
+  email: string;
   content: string;
 }
 
