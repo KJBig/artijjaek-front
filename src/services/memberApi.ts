@@ -29,6 +29,28 @@ export interface UnsubscriptionMemberPaload {
   detail: string;
 }
 
+export interface CompanySimpleDataResponse {
+  companyId: number;
+  companyNameKr: string;
+  companyNameEn: string;
+  companyImageUrl: string;
+  companyBlogUrl: string;
+}
+
+export interface CategorySimpleDataResponse {
+  categoryId: number;
+  categoryName: string;
+}
+
+export interface MemberDataResponse {
+  email: string;
+  nickname: string;
+  companies: number[] | CompanySimpleDataResponse[];
+  categories: number[] | CategorySimpleDataResponse[];
+  companyIds?: number[] | CompanySimpleDataResponse[];
+  categoryIds?: number[] | CategorySimpleDataResponse[];
+}
+
 export async function subscribeMember(payload: SubscribeMemberPayload) {
   try {
     const res = await fetch(`${BASE_URL}/api/v1/member/register`, {
@@ -55,7 +77,7 @@ export async function subscribeMember(payload: SubscribeMemberPayload) {
   }
 }
 
-export async function getMySubscription(email: string, token: string) {
+export async function getMySubscription(email: string, token: string): Promise<ApiResponse<MemberDataResponse>> {
   try {
     const res = await fetch(`${BASE_URL}/api/v1/member/data?email=${email}&token=${token}`, {
       method: "GET",
