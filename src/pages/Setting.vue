@@ -709,6 +709,80 @@ const retry = () => {
   loadInitial();
 };
 
+const toIdList = (
+  list: unknown,
+  idKey: "companyId" | "categoryId"
+): number[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (typeof item === "number") return item;
+      if (item && typeof item === "object") {
+        const raw = (item as Record<string, unknown>)[idKey];
+        if (typeof raw === "number") return raw;
+      }
+      return null;
+    })
+    .filter((id): id is number => id !== null);
+};
+
+const toCompanyList = (list: unknown): Company[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const obj = item as Record<string, unknown>;
+      const id = obj.companyId;
+      if (typeof id !== "number") return null;
+      return {
+        id,
+        image: typeof obj.companyImageUrl === "string" ? obj.companyImageUrl : "",
+        nameKr: typeof obj.companyNameKr === "string" ? obj.companyNameKr : "",
+        nameEn: typeof obj.companyNameEn === "string" ? obj.companyNameEn : "",
+        blogUrl: typeof obj.companyBlogUrl === "string" ? obj.companyBlogUrl : "",
+      } as Company;
+    })
+    .filter((item): item is Company => item !== null);
+};
+
+const toCategoryList = (list: unknown): Category[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const obj = item as Record<string, unknown>;
+      const id = obj.categoryId;
+      if (typeof id !== "number") return null;
+      return {
+        id,
+        name: typeof obj.categoryName === "string" ? obj.categoryName : "",
+      } as Category;
+    })
+    .filter((item): item is Category => item !== null);
+};
+
+const mergeCompanyOptions = (items: Company[]) => {
+  if (!items.length) return;
+  const map = new Map<number, Company>();
+  for (const existing of options.value.companies) map.set(existing.id, existing);
+  for (const incoming of items) {
+    const prev = map.get(incoming.id);
+    map.set(incoming.id, prev ? { ...prev, ...incoming } : incoming);
+  }
+  options.value.companies = Array.from(map.values());
+};
+
+const mergeCategoryOptions = (items: Category[]) => {
+  if (!items.length) return;
+  const map = new Map<number, Category>();
+  for (const existing of options.value.categories) map.set(existing.id, existing);
+  for (const incoming of items) {
+    const prev = map.get(incoming.id);
+    map.set(incoming.id, prev ? { ...prev, ...incoming } : incoming);
+  }
+  options.value.categories = Array.from(map.values());
+};
+
 /* 초기 로드 */
 const loadInitial = async () => {
   const me = await guard.load(async (email, token) => {
@@ -722,8 +796,10 @@ const loadInitial = async () => {
     return resp.data as {
       email: string;
       nickname: string;
-      companyIds: number[];
-      categoryIds: number[];
+      companies?: unknown;
+      categories?: unknown;
+      companyIds?: unknown;
+      categoryIds?: unknown;
     };
   });
 
@@ -731,8 +807,14 @@ const loadInitial = async () => {
 
   form.value.email = me.email ?? emailFromQuery.value ?? "";
   form.value.nickname = me.nickname ?? "";
-  selected.value.companies = Array.isArray(me.companyIds) ? me.companyIds : [];
-  selected.value.categories = Array.isArray(me.categoryIds) ? me.categoryIds : [];
+  const companiesRaw = me.companies ?? me.companyIds;
+  const categoriesRaw = me.categories ?? me.categoryIds;
+
+  mergeCompanyOptions(toCompanyList(companiesRaw));
+  mergeCategoryOptions(toCategoryList(categoriesRaw));
+
+  selected.value.companies = toIdList(companiesRaw, "companyId");
+  selected.value.categories = toIdList(categoriesRaw, "categoryId");
 
   initialSnapshot.value = {
     companies: [...selected.value.companies],
