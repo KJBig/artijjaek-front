@@ -7,12 +7,19 @@ export interface Company {
   image: string;
   nameKr: string;
   nameEn: string;
+  blogUrl?: string;
 }
 
 export interface PagedCompanies {
   items: Company[];
   hasMore: boolean;
   nextPage: number | null;
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
 /**
@@ -35,28 +42,58 @@ export async function fetchCompaniesPage(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    const rawItems = data?.data.content;
+    const payload = data?.data ?? {};
+    const rawItems = Array.isArray(payload?.content) ? payload.content : [];
 
-    const items: Company[] = rawItems.map((conpany: any) => ({
-      id: conpany.companyId,
-      image: conpany.companyImageUrl,
-      nameKr: conpany.companyNameKr,
-      nameEn: conpany.companyNameEn
+    const items: Company[] = rawItems.map((company: any) => ({
+      id: company.companyId ?? company.id,
+      image: company.companyImageUrl ?? company.image ?? "",
+      nameKr: company.companyNameKr ?? company.nameKr ?? "",
+      nameEn: company.companyNameEn ?? company.nameEn ?? "",
+      blogUrl: company.companyBlogUrl ?? company.blogUrl ?? ""
     }));
 
+    const currentPage = typeof payload?.number === "number" ? payload.number : page;
+    const pageSize = typeof payload?.size === "number" ? payload.size : size;
+    const totalPages = typeof payload?.totalPages === "number" ? payload.totalPages : 0;
+    const totalElements = typeof payload?.totalElements === "number" ? payload.totalElements : 0;
+
     let hasMore: boolean;
-    if (typeof data?.hasMore === "boolean") {
-      hasMore = data.hasMore;
-    } else if (typeof data?.totalPages === "number") {
-      hasMore = page + 1 < data.totalPages;
+    if (typeof payload?.last === "boolean") {
+      hasMore = !payload.last;
+    } else if (typeof totalPages === "number" && totalPages > 0) {
+      hasMore = currentPage + 1 < totalPages;
     } else {
-      hasMore = items.length === size;
+      hasMore = items.length === pageSize;
     }
 
-    return { items, hasMore, nextPage: hasMore ? page + 1 : null };
+    const isFirst = typeof payload?.first === "boolean" ? payload.first : currentPage === 0;
+    const isLast = typeof payload?.last === "boolean" ? payload.last : !hasMore;
+
+    return {
+      items,
+      hasMore,
+      nextPage: hasMore ? currentPage + 1 : null,
+      page: currentPage,
+      size: pageSize,
+      totalPages: totalPages > 0 ? totalPages : hasMore ? currentPage + 2 : currentPage + 1,
+      totalElements,
+      isFirst,
+      isLast,
+    };
   } catch (err) {
     console.error("[fetchCompaniesPage] Error:", err);
-    return { items: [], hasMore: false, nextPage: null };
+    return {
+      items: [],
+      hasMore: false,
+      nextPage: null,
+      page,
+      size,
+      totalPages: 0,
+      totalElements: 0,
+      isFirst: page === 0,
+      isLast: true,
+    };
   }
 }
 
