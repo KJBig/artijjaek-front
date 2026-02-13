@@ -111,3 +111,26 @@ export async function fetchAllCompanies(size = 100): Promise<Company[]> {
   }
   return all;
 }
+
+export async function fetchCompanyCount(): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/company/count`, {
+      method: "GET",
+      headers: jsonHeaders
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const raw = data?.data;
+
+    if (typeof raw === "number") return raw;
+    if (raw && typeof raw === "object") {
+      if (typeof raw.count === "number") return raw.count;
+      if (typeof raw.totalCount === "number") return raw.totalCount;
+    }
+    return null;
+  } catch (err) {
+    console.error("[fetchCompanyCount] Error:", err);
+    return null;
+  }
+}

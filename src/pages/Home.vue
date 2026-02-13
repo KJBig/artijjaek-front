@@ -7,8 +7,11 @@
           한국 IT 기업의 최신 기술 글을 한눈에.<br />
           구독으로 놓치지 마세요.
         </p>
+        <p v-if="companyCount !== null" class="count">
+          현재 {{ companyCount }}개의 회사를 지원하고 있어요.
+        </p>
         <button class="cta" @click="goRegister">
-          구독 시작하기
+          무료 구독하기
         </button>
       </div>
     </main>
@@ -16,10 +19,17 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import { useRouter } from 'vue-router';
+import { fetchCompanyCount } from "../services/companyApi";
 
 const router = useRouter();
+const companyCount = ref<number | null>(null);
 const goRegister = () => router.push('/register');
+
+onMounted(async () => {
+  companyCount.value = await fetchCompanyCount();
+});
 </script>
 
 <style scoped>
@@ -58,7 +68,15 @@ const goRegister = () => router.push('/register');
   font-size: 18px;
   line-height: 1.6;
   color: #666666;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
+}
+
+.count {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #4b3ec2;
+  font-weight: 700;
+  margin-bottom: 24px;
 }
 
 /* ✅ 시그니처 컬러 기반 버튼 */
@@ -90,6 +108,10 @@ const goRegister = () => router.push('/register');
 
   .desc {
     font-size: 16px;
+  }
+
+  .count {
+    font-size: 15px;
   }
 
   .content {
