@@ -10,6 +10,8 @@ export interface Company {
   blogUrl?: string;
 }
 
+export type CompanySortOption = "POPULARITY";
+
 export interface PagedCompanies {
   items: Company[];
   hasMore: boolean;
@@ -27,12 +29,13 @@ export interface PagedCompanies {
  */
 export async function fetchCompaniesPage(
   page: number,
-  size: number
+  size: number,
+  sortOption?: CompanySortOption
 ): Promise<PagedCompanies> {
-  const qs = new URLSearchParams({
-    page: String(page),
-    size: String(size),
-  });
+  const qs = new URLSearchParams();
+  qs.set("page", String(page));
+  qs.set("size", String(size));
+  if (sortOption) qs.set("sort_option", sortOption);
 
   try {
     const res = await fetch(`${BASE_URL}/api/v1/company/list?${qs.toString()}`, {
@@ -100,11 +103,14 @@ export async function fetchCompaniesPage(
 /**
  * 전체 회사 목록을 모두 불러오는 함수 (전체선택용)
  */
-export async function fetchAllCompanies(size = 100): Promise<Company[]> {
+export async function fetchAllCompanies(
+  size = 100,
+  sortOption?: CompanySortOption
+): Promise<Company[]> {
   const all: Company[] = [];
   let page = 0;
   while (true) {
-    const { items, hasMore, nextPage } = await fetchCompaniesPage(page, size);
+    const { items, hasMore, nextPage } = await fetchCompaniesPage(page, size, sortOption);
     if (items.length) all.push(...items);
     if (!hasMore || nextPage == null) break;
     page = nextPage;

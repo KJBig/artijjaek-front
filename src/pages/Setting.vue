@@ -424,7 +424,11 @@ const loadMoreCompanies = async () => {
   if (loadingCompanies.value || !hasMoreCompanies.value) return;
   loadingCompanies.value = true;
   try {
-    const { items, hasMore, nextPage } = await fetchCompanyPage(pageCompanies.value, sizeCompanies.value);
+    const { items, hasMore, nextPage } = await fetchCompanyPage(
+      pageCompanies.value,
+      sizeCompanies.value,
+      "POPULARITY"
+    );
     const exist = new Set(options.value.companies.map((c) => c.id));
     options.value.companies.push(...items.filter((c) => !exist.has(c.id)));
     hasMoreCompanies.value = !!hasMore;
@@ -452,7 +456,7 @@ const toggleSelectAllCompanies = async () => {
   if (isAllSelectedCompanies.value) {
     selected.value.companies = [];
   } else {
-    const all = await fetchAllCompanies(sizeCompanies.value);
+    const all = await fetchAllCompanies(sizeCompanies.value, "POPULARITY");
     selected.value.companies = all.map((c) => c.id);
     options.value.companies = all;
     hasMoreCompanies.value = false;
