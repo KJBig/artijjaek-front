@@ -8,6 +8,7 @@ const CompanyList = () => import('../pages/CompanyList.vue')
 const Setting = () => import('../pages/Setting.vue')
 const Unsubscription = () => import('../pages/Unsubscription.vue')
 const Thankyou = () => import('../pages/Thankyou.vue')
+const Policy = () => import('../pages/Policy.vue')
 const NotFound = () => import('../pages/NotFound.vue')
 
 const routes: Array<RouteRecordRaw> = [
@@ -18,6 +19,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/setting', name: 'setting', component: Setting },
   { path: '/unsubscription', name: 'unsubscription', component: Unsubscription },
   { path: '/thankyou', name: 'thankyou', component: Thankyou },
+  { path: '/policy', name: 'policy', component: Policy },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
