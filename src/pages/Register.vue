@@ -13,7 +13,7 @@
             <span class="label">회사 <small>중복 선택 가능</small></span>
 
             <!-- ✅ 열릴 때만 z-index 상승 -->
-            <div class="dropdown" :class="{ 'is-invalid': errors.companies, 'is-open': openDropdown }">
+            <div class="dropdown" :class="{ 'is-open': openDropdown }">
               <button
                 ref="toggleRef"
                 class="dropdown-toggle"
@@ -66,8 +66,6 @@
               </div>
             </div>
 
-            <p v-if="errors.companies" class="error-text">{{ errors.companies }}</p>
-
             <!-- 칩 (회사) -->
             <div
               class="chips"
@@ -85,6 +83,7 @@
               <template v-if="selected.companies.length">
                 <span v-for="id in selected.companies" :key="id" class="chip" role="listitem">
                   <img v-if="companyById.get(id)?.image" :src="companyById.get(id)?.image" alt="" class="chip-thumb" />
+                  <span v-else class="chip-thumb chip-thumb--empty" aria-hidden="true"></span>
                   <span class="chip-text">
                     {{ companyById.get(id)?.nameKr }}
                   </span>
@@ -106,7 +105,7 @@
             <span class="label">카테고리 <small>중복 선택 가능</small></span>
 
             <!-- ✅ 열릴 때만 z-index 상승 (서로 간섭 없도록) -->
-            <div class="dropdown" :class="{ 'is-invalid': errors.categories, 'is-open': openCategoryDropdown }">
+            <div class="dropdown" :class="{ 'is-open': openCategoryDropdown }">
               <button
                 ref="toggleRefCat"
                 class="dropdown-toggle"
@@ -158,8 +157,6 @@
               </div>
             </div>
 
-            <p v-if="errors.categories" class="error-text">{{ errors.categories }}</p>
-
             <!-- 칩 (카테고리) -->
             <div
               class="chips"
@@ -176,7 +173,6 @@
             >
               <template v-if="selected.categories.length">
                 <span v-for="id in selected.categories" :key="id" class="chip" role="listitem">
-                  <img v-if="categoryById.get(id)?.image" :src="categoryById.get(id)?.image" alt="" class="chip-thumb" />
                   <span class="chip-text">
                     {{ categoryById.get(id)?.name }}
                   </span>
@@ -202,12 +198,9 @@
                 v-model="form.email"
                 type="email"
                 class="input"
-                :class="{ 'is-invalid': errors.email }"
                 placeholder="ex) example@email.com"
-                @blur="validateEmail"
               />
             </div>
-            <p v-if="errors.email" class="error-text">{{ errors.email }}</p>
           </div>
 
           <!-- ================= 닉네임 ================= -->
@@ -218,23 +211,34 @@
               v-model="form.nickname"
               type="text"
               class="input"
-              :class="{ 'is-invalid': errors.nickname }"
               placeholder="ex) 준커"
-              @blur="validateNickname"
             />
-            <p v-if="errors.nickname" class="error-text">{{ errors.nickname }}</p>
           </div>
+
+          <label class="policy-consent">
+            <input
+              v-model="agreedToPolicy"
+              type="checkbox"
+              class="policy-cb"
+              aria-label="개인정보처리방침 동의"
+              @change="errors.submit = undefined"
+            />
+            <span class="policy-box" aria-hidden="true"></span>
+            <span class="policy-text">
+              <a href="/policy" target="_blank" rel="noopener noreferrer" class="policy-link">개인정보처리방침</a>에 동의합니다.
+            </span>
+          </label>
 
           <!-- ================= 제출 ================= -->
           <button
             class="primary"
             type="button"
-            :disabled="isSubmitting"
+            :disabled="!canSubmit"
             @click="submit"
-            title="확인"
+            title="구독하기"
           >
             <span v-if="isSubmitting">처리 중…</span>
-            <span v-else>확인</span>
+            <span v-else>구독하기</span>
           </button>
 
           <p v-if="errors.submit" class="submit-error" role="alert">{{ errors.submit }}</p>
@@ -268,6 +272,7 @@ const form = ref({ email: "", nickname: "" });
 const options = ref<{ companies: Company[]; categories: Category[] }>({ companies: [], categories: [] });
 const selected = ref<{ companies: number[]; categories: number[] }>({ companies: [], categories: [] });
 const isSubmitting = ref(false);
+const agreedToPolicy = ref(false);
 
 /* ✅ 팝업 상태 */
 const popup = ref<{ open: boolean; title: string; message: string, redirectTo?: string }>({
@@ -366,7 +371,7 @@ onBeforeUnmount(() => {
 });
 
 /* 에러 */
-const errors = ref<{ companies?: string; categories?: string; email?: string; nickname?: string; submit?: string }>({});
+const errors = ref<{ submit?: string }>({});
 
 /* computed */
 const allCompanyIds = computed(() => options.value.companies.map((c) => c.id));
@@ -389,19 +394,18 @@ const categoryById = computed(() => {
   return m;
 });
 
-/* 이메일 유효성 */
-const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const canSubmit = computed(() => {
+  return !isSubmitting.value && agreedToPolicy.value;
+});
 
 /* ===== 회사 선택 ===== */
 const toggleCompany = (id: number) => {
   const set = new Set(selected.value.companies);
   set.has(id) ? set.delete(id) : set.add(id);
   selected.value.companies = Array.from(set);
-  errors.value.companies = selected.value.companies.length ? undefined : "회사를 1개 이상 선택해주세요.";
 };
 const removeCompany = (id: number) => {
   selected.value.companies = selected.value.companies.filter((v) => v !== id);
-  errors.value.companies = selected.value.companies.length ? undefined : "회사를 1개 이상 선택해주세요.";
 };
 
 /* ===== 카테고리 선택 ===== */
@@ -409,11 +413,9 @@ const toggleCategory = (id: number) => {
   const set = new Set(selected.value.categories);
   set.has(id) ? set.delete(id) : set.add(id);
   selected.value.categories = Array.from(set);
-  errors.value.categories = selected.value.categories.length ? undefined : "카테고리를 1개 이상 선택해주세요.";
 };
 const removeCategory = (id: number) => {
   selected.value.categories = selected.value.categories.filter((v) => v !== id);
-  errors.value.categories = selected.value.categories.length ? undefined : "카테고리를 1개 이상 선택해주세요.";
 };
 
 /* ===== 전체 선택: 회사 ===== */
@@ -421,12 +423,11 @@ const toggleSelectAllCompanies = async () => {
   if (isAllSelectedCompanies.value) {
     selected.value.companies = [];
   } else {
-    const all = await fetchAllCompanies(sizeCompanies.value);
+    const all = await fetchAllCompanies(sizeCompanies.value, "POPULARITY");
     selected.value.companies = all.map((c) => c.id);
     options.value.companies = all;
     hasMoreCompanies.value = false;
   }
-  errors.value.companies = selected.value.companies.length ? undefined : "회사를 1개 이상 선택해주세요.";
 };
 
 /* ===== 전체 선택: 카테고리 (페이징 반복 호출) ===== */
@@ -461,14 +462,17 @@ const toggleSelectAllCategories = async () => {
     options.value.categories = all;
     hasMoreCategories.value = false;
   }
-  errors.value.categories = selected.value.categories.length ? undefined : "카테고리를 1개 이상 선택해주세요.";
 };
 
 /* ===== API 호출 + 무한 스크롤 ===== */
 const loadMoreCompanies = async () => {
   if (loadingCompanies.value || !hasMoreCompanies.value) return;
   loadingCompanies.value = true;
-  const { items, hasMore, nextPage } = await fetchCompanyPage(pageCompanies.value, sizeCompanies.value);
+  const { items, hasMore, nextPage } = await fetchCompanyPage(
+    pageCompanies.value,
+    sizeCompanies.value,
+    "POPULARITY"
+  );
   const exist = new Set(options.value.companies.map((c) => c.id));
   options.value.companies.push(...items.filter((c) => !exist.has(c.id)));
   hasMoreCompanies.value = !!hasMore;
@@ -486,37 +490,14 @@ const loadMoreCategories = async () => {
   loadingCategories.value = false;
 };
 
-/* ===== 이메일/닉네임/선택 검증 ===== */
-const validateEmail = () => {
-  if (!form.value.email.trim()) return (errors.value.email = "이메일을 입력해주세요.");
-  if (!emailRe.test(form.value.email.trim())) return (errors.value.email = "올바른 이메일 형식이 아닙니다.");
-  errors.value.email = undefined;
-};
-const validateNickname = () => {
-  if (!form.value.nickname.trim()) return (errors.value.nickname = "닉네임을 입력해주세요.");
-  errors.value.nickname = undefined;
-};
-const validateCompanies = () => {
-  if (selected.value.companies.length === 0) return (errors.value.companies = "회사를 1개 이상 선택해주세요.");
-  errors.value.companies = undefined;
-};
-const validateCategories = () => {
-  if (selected.value.categories.length === 0) return (errors.value.categories = "카테고리를 1개 이상 선택해주세요.");
-  errors.value.categories = undefined;
-};
-const validateAll = () => {
-  validateEmail();
-  validateNickname();
-  validateCompanies();
-  validateCategories();
-  return !errors.value.email && !errors.value.nickname && !errors.value.companies && !errors.value.categories;
-};
-
 /* ===== 제출 ===== */
 const submit = async () => {
   errors.value.submit = undefined;
 
-  if (!validateAll()) return;
+  if (!agreedToPolicy.value) {
+    errors.value.submit = "개인정보처리방침 동의가 필요합니다.";
+    return;
+  }
 
   const payload = {
     companyIds: selected.value.companies,
@@ -610,6 +591,7 @@ const resetFormAndSelection = () => {
   form.value.nickname = "";
   selected.value.companies = [];
   selected.value.categories = [];
+  agreedToPolicy.value = false;
   errors.value = {};
   if (chipsRef.value) chipsRef.value.scrollLeft = 0;
   if (chipsRef2.value) chipsRef2.value.scrollLeft = 0;
@@ -846,7 +828,9 @@ onMounted(() => {
 .chips{
   width:100%; min-width:0;
   display:flex; flex-wrap:nowrap; gap:8px;
+  align-items:center;
   overflow-x:auto; overflow-y:hidden; white-space:nowrap;
+  height:40px;
   padding:6px 2px; -webkit-overflow-scrolling:touch;
   scroll-snap-type:x proximity; position:relative; user-select:none; touch-action:pan-x;
   scrollbar-width:none; -ms-overflow-style:none;
@@ -854,10 +838,18 @@ onMounted(() => {
 .chips::-webkit-scrollbar{ display:none; }
 .chips.dragging{ cursor:grabbing; }
 .chips:not(.dragging){ cursor:grab; }
-.chips-placeholder{ color:#9a97ad; font-size:13px; padding-left:4px; }
+.chips-placeholder{
+  display:inline-flex;
+  align-items:center;
+  height:100%;
+  color:#9a97ad;
+  font-size:13px;
+  padding-left:4px;
+}
 
 .chip{
   flex:0 0 auto; display:inline-flex; align-items:center; gap:6px;
+  height:28px;
   padding:6px 10px; border-radius:999px;
   background:#ffffff;
   border:1px solid #e4e3f0;
@@ -865,6 +857,7 @@ onMounted(() => {
   color: #16161a;
 }
 .chip-thumb{ width:18px; height:18px; border-radius:4px; object-fit:cover; flex:0 0 18px; }
+.chip-thumb--empty{ background:#f2f1fa; border:1px solid #e1dff0; }
 .chip-text{ max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #16161a;}
 .chip-x{ background:none; border:0; cursor:pointer; color:#6e66c6; }
 
@@ -893,6 +886,47 @@ onMounted(() => {
 /* 에러 */
 .error-text{ color:#b73737; font-size:13px; }
 
+.policy-consent{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+  color:#22212d;
+  font-size:14px;
+  font-weight:400;
+}
+.policy-cb{ position:absolute; opacity:0; width:0; height:0; }
+.policy-box{
+  width:18px;
+  height:18px;
+  border:2px solid #8e8ea2;
+  border-radius:4px;
+  background:#fff;
+  position:relative;
+  flex:0 0 auto;
+}
+.policy-cb:checked + .policy-box{
+  border-color:#4b42b9;
+  background:#4b42b9;
+}
+.policy-cb:checked + .policy-box::after{
+  content:"";
+  position:absolute;
+  left:3px;
+  top:2px;
+  width:8px;
+  height:4px;
+  border:2px solid #fff;
+  border-top:0;
+  border-right:0;
+  transform:rotate(-45deg);
+}
+.policy-text{ line-height:1.4; }
+.policy-link{
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+
 /* 제출 버튼 */
 .primary{
   width:100%; padding:12px 14px; border-radius:12px;
@@ -906,7 +940,14 @@ onMounted(() => {
   transform: translateY(-1px);
   box-shadow: 0 14px 30px rgba(102,117,224,.32);
 }
-.primary[disabled]{ opacity:.65; cursor:not-allowed; }
+.primary[disabled]{
+  background: linear-gradient(135deg, #c5caef 0%, #c9bce6 100%);
+  border-color: #c7c1e4;
+  color: #ffffff;
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+}
 
 .submit-error{ color:#b03030; font-size:13px; }
 
@@ -914,5 +955,6 @@ onMounted(() => {
 @media (max-width: 640px){
   .panel-head{ padding:20px; }
   .panel-body{ padding:16px; } /* 모바일도 동일 간격 유지 */
+  .policy-consent{ font-size:14px; }
 }
 </style>

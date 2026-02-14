@@ -96,6 +96,7 @@
               <template v-if="selected.companies.length">
                 <span v-for="id in selected.companies" :key="id" class="chip" role="listitem">
                   <img v-if="companyById.get(id)?.image" :src="companyById.get(id)?.image" alt="" class="chip-thumb" />
+                  <span v-else class="chip-thumb chip-thumb--empty" aria-hidden="true"></span>
                   <span class="chip-text">{{ companyById.get(id)?.nameKr }}</span>
                   <button class="chip-x" type="button" @click.stop.prevent="removeCompany(id)" aria-label="삭제" title="삭제">✕</button>
                 </span>
@@ -174,7 +175,6 @@
             >
               <template v-if="selected.categories.length">
                 <span v-for="id in selected.categories" :key="id" class="chip" role="listitem">
-                  <img v-if="categoryById.get(id)?.image" :src="categoryById.get(id)?.image" alt="" class="chip-thumb" />
                   <span class="chip-text">{{ categoryById.get(id)?.name }}</span>
                   <button class="chip-x" type="button" @click.stop.prevent="removeCategory(id)" aria-label="삭제" title="삭제">✕</button>
                 </span>
@@ -424,7 +424,11 @@ const loadMoreCompanies = async () => {
   if (loadingCompanies.value || !hasMoreCompanies.value) return;
   loadingCompanies.value = true;
   try {
-    const { items, hasMore, nextPage } = await fetchCompanyPage(pageCompanies.value, sizeCompanies.value);
+    const { items, hasMore, nextPage } = await fetchCompanyPage(
+      pageCompanies.value,
+      sizeCompanies.value,
+      "POPULARITY"
+    );
     const exist = new Set(options.value.companies.map((c) => c.id));
     options.value.companies.push(...items.filter((c) => !exist.has(c.id)));
     hasMoreCompanies.value = !!hasMore;
@@ -452,7 +456,7 @@ const toggleSelectAllCompanies = async () => {
   if (isAllSelectedCompanies.value) {
     selected.value.companies = [];
   } else {
-    const all = await fetchAllCompanies(sizeCompanies.value);
+    const all = await fetchAllCompanies(sizeCompanies.value, "POPULARITY");
     selected.value.companies = all.map((c) => c.id);
     options.value.companies = all;
     hasMoreCompanies.value = false;
@@ -709,6 +713,80 @@ const retry = () => {
   loadInitial();
 };
 
+const toIdList = (
+  list: unknown,
+  idKey: "companyId" | "categoryId"
+): number[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (typeof item === "number") return item;
+      if (item && typeof item === "object") {
+        const raw = (item as Record<string, unknown>)[idKey];
+        if (typeof raw === "number") return raw;
+      }
+      return null;
+    })
+    .filter((id): id is number => id !== null);
+};
+
+const toCompanyList = (list: unknown): Company[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const obj = item as Record<string, unknown>;
+      const id = obj.companyId;
+      if (typeof id !== "number") return null;
+      return {
+        id,
+        image: typeof obj.companyImageUrl === "string" ? obj.companyImageUrl : "",
+        nameKr: typeof obj.companyNameKr === "string" ? obj.companyNameKr : "",
+        nameEn: typeof obj.companyNameEn === "string" ? obj.companyNameEn : "",
+        blogUrl: typeof obj.companyBlogUrl === "string" ? obj.companyBlogUrl : "",
+      } as Company;
+    })
+    .filter((item): item is Company => item !== null);
+};
+
+const toCategoryList = (list: unknown): Category[] => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const obj = item as Record<string, unknown>;
+      const id = obj.categoryId;
+      if (typeof id !== "number") return null;
+      return {
+        id,
+        name: typeof obj.categoryName === "string" ? obj.categoryName : "",
+      } as Category;
+    })
+    .filter((item): item is Category => item !== null);
+};
+
+const mergeCompanyOptions = (items: Company[]) => {
+  if (!items.length) return;
+  const map = new Map<number, Company>();
+  for (const existing of options.value.companies) map.set(existing.id, existing);
+  for (const incoming of items) {
+    const prev = map.get(incoming.id);
+    map.set(incoming.id, prev ? { ...prev, ...incoming } : incoming);
+  }
+  options.value.companies = Array.from(map.values());
+};
+
+const mergeCategoryOptions = (items: Category[]) => {
+  if (!items.length) return;
+  const map = new Map<number, Category>();
+  for (const existing of options.value.categories) map.set(existing.id, existing);
+  for (const incoming of items) {
+    const prev = map.get(incoming.id);
+    map.set(incoming.id, prev ? { ...prev, ...incoming } : incoming);
+  }
+  options.value.categories = Array.from(map.values());
+};
+
 /* 초기 로드 */
 const loadInitial = async () => {
   const me = await guard.load(async (email, token) => {
@@ -722,8 +800,10 @@ const loadInitial = async () => {
     return resp.data as {
       email: string;
       nickname: string;
-      companyIds: number[];
-      categoryIds: number[];
+      companies?: unknown;
+      categories?: unknown;
+      companyIds?: unknown;
+      categoryIds?: unknown;
     };
   });
 
@@ -731,8 +811,14 @@ const loadInitial = async () => {
 
   form.value.email = me.email ?? emailFromQuery.value ?? "";
   form.value.nickname = me.nickname ?? "";
-  selected.value.companies = Array.isArray(me.companyIds) ? me.companyIds : [];
-  selected.value.categories = Array.isArray(me.categoryIds) ? me.categoryIds : [];
+  const companiesRaw = me.companies ?? me.companyIds;
+  const categoriesRaw = me.categories ?? me.categoryIds;
+
+  mergeCompanyOptions(toCompanyList(companiesRaw));
+  mergeCategoryOptions(toCategoryList(categoriesRaw));
+
+  selected.value.companies = toIdList(companiesRaw, "companyId");
+  selected.value.categories = toIdList(categoriesRaw, "categoryId");
 
   initialSnapshot.value = {
     companies: [...selected.value.companies],
@@ -798,14 +884,15 @@ onMounted(() => {
 .cb:checked + .box::after{ content:""; position:absolute; left:2.5px; top:2px; width:8px; height:4px; border:2px solid #fff; border-top:0; border-right:0; transform: rotate(-45deg); }
 
 /* 칩 */
-.chips{ width:100%; min-width:0; display:flex; flex-wrap:nowrap; gap:8px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; padding:6px 2px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; position:relative; user-select:none; touch-action:pan-x; scrollbar-width:none; -ms-overflow-style:none; }
+.chips{ width:100%; min-width:0; display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto; overflow-y:hidden; white-space:nowrap; height:40px; padding:6px 2px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; position:relative; user-select:none; touch-action:pan-x; scrollbar-width:none; -ms-overflow-style:none; }
 .chips::-webkit-scrollbar{ display:none; }
 .chips.dragging{ cursor:grabbing; }
 .chips:not(.dragging){ cursor:grab; }
-.chips-placeholder{ color:#9a97ad; font-size:13px; padding-left:4px; }
+.chips-placeholder{ display:inline-flex; align-items:center; height:100%; color:#9a97ad; font-size:13px; padding-left:4px; }
 
-.chip{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#ffffff; border:1px solid #e4e3f0; scroll-snap-align:start; color: #16161a; }
+.chip{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; height:28px; padding:6px 10px; border-radius:999px; background:#ffffff; border:1px solid #e4e3f0; scroll-snap-align:start; color: #16161a; }
 .chip-thumb{ width:18px; height:18px; border-radius:4px; object-fit:cover; flex:0 0 18px; }
+.chip-thumb--empty{ background:#f2f1fa; border:1px solid #e1dff0; }
 .chip-text{ max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #16161a;}
 .chip-x{ background:none; border:0; cursor:pointer; color:#6e66c6; }
 
@@ -817,12 +904,14 @@ onMounted(() => {
 .input::placeholder{ color:#9a98aa; }
 .input.is-invalid, .dropdown.is-invalid .dropdown-toggle{ border-color:#d96060; box-shadow:0 0 0 3px rgba(217,96,96,.12); background:#fff7f7; }
 .field--email .input { color: #9a98aa; }
+.input-row{ display:flex; gap:8px; align-items:center; }
+.field--email { margin-bottom: 0; }
 
 /* 액션 */
 .actions{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
 .primary{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(118,82,201,.0); background: linear-gradient(135deg, #6675E0 0%, #7652C9 100%); color:#fff; font-weight:800; cursor:pointer; box-shadow: 0 10px 24px rgba(102,117,224,.24); transition: transform .15s ease, box-shadow .2s ease; }
 .primary:hover:not([disabled]){ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(102,117,224,.32); }
-.primary[disabled]{ opacity:.65; cursor:not-allowed; }
+.primary[disabled]{ background: linear-gradient(135deg, #c5caef 0%, #c9bce6 100%); border-color: #c7c1e4; color: #ffffff; box-shadow: none; opacity: 1; cursor:not-allowed; }
 
 .link-danger{
   align-self: flex-start;

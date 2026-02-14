@@ -10,6 +10,7 @@
     <nav class="nav" aria-label="헤더 내비게이션">
       <!-- Primary -->
       <button class="btn btn-primary" @click="goRegister">구독하기</button>
+      <button class="btn btn-ghost" @click="goCompanyList">지원하는 회사 리스트</button>
       <!-- Ghost / Outline -->
       <button class="btn btn-ghost" @click="goInquiry">문의하기</button>
     </nav>
@@ -22,6 +23,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const goRegister = () => router.push('/register');
 const goHome = () => router.push('/');
+const goCompanyList = () => router.push('/companies');
 
 /**
  * ✅ 요청하기 버튼 클릭 시 /inquiry 페이지로 이동
@@ -120,6 +122,7 @@ const goInquiry = () => {
 @media (max-width: 768px){
   .header{ padding:0 20px; }
   .logo-text{ font-size:24px; }
-  .btn{ padding:9px 14px; }
+  .nav{ gap:8px; }
+  .btn{ padding:9px 12px; font-size:13px; }
 }
 </style>
