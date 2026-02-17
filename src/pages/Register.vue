@@ -394,8 +394,21 @@ const categoryById = computed(() => {
   return m;
 });
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const hasSelectedCompanies = computed(() => selected.value.companies.length > 0);
+const hasSelectedCategories = computed(() => selected.value.categories.length > 0);
+const hasValidEmail = computed(() => emailRegex.test(form.value.email.trim()));
+const hasValidNickname = computed(() => form.value.nickname.trim().length > 0);
+
 const canSubmit = computed(() => {
-  return !isSubmitting.value && agreedToPolicy.value;
+  return (
+    !isSubmitting.value &&
+    hasSelectedCompanies.value &&
+    hasSelectedCategories.value &&
+    hasValidEmail.value &&
+    hasValidNickname.value &&
+    agreedToPolicy.value
+  );
 });
 
 /* ===== 회사 선택 ===== */
@@ -493,6 +506,26 @@ const loadMoreCategories = async () => {
 /* ===== 제출 ===== */
 const submit = async () => {
   errors.value.submit = undefined;
+
+  if (!hasSelectedCompanies.value) {
+    errors.value.submit = "회사를 1개 이상 선택해주세요.";
+    return;
+  }
+
+  if (!hasSelectedCategories.value) {
+    errors.value.submit = "카테고리를 1개 이상 선택해주세요.";
+    return;
+  }
+
+  if (!hasValidEmail.value) {
+    errors.value.submit = "이메일 형식이 올바르지 않습니다.";
+    return;
+  }
+
+  if (!hasValidNickname.value) {
+    errors.value.submit = "닉네임을 입력해주세요.";
+    return;
+  }
 
   if (!agreedToPolicy.value) {
     errors.value.submit = "개인정보처리방침 동의가 필요합니다.";
