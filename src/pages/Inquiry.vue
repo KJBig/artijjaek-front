@@ -21,6 +21,7 @@
               class="input"
               type="email"
               v-model.trim="email"
+              maxlength="255"
               placeholder="ex) example@email.com"
               :disabled="busy"
               autocomplete="email"
@@ -83,9 +84,10 @@ const showPopup = ref(false);
 
 const isSubmitDisabled = computed(() => {
   const msgLen = message.value.trim().length;
+  const emailTrimmed = email.value.trim();
 
   // ✅ 간단 이메일 형식 검증
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+  const emailValid = emailTrimmed.length <= 255 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
 
   return busy.value || !emailValid || msgLen < 1 || msgLen > 1000;
 });

@@ -198,7 +198,9 @@
                 v-model="form.email"
                 type="email"
                 class="input"
+                :maxlength="MAX_INPUT_LENGTH"
                 placeholder="ex) example@email.com"
+                @input="enforceEmailLength"
               />
             </div>
           </div>
@@ -211,7 +213,9 @@
               v-model="form.nickname"
               type="text"
               class="input"
+              :maxlength="MAX_INPUT_LENGTH"
               placeholder="ex) 준커"
+              @input="enforceNicknameLength"
             />
           </div>
 
@@ -304,6 +308,18 @@ let observerCat: IntersectionObserver | null = null;
 /* 드롭다운 열림 */
 const openDropdown = ref(false);
 const openCategoryDropdown = ref(false);
+const MAX_INPUT_LENGTH = 255;
+
+const enforceEmailLength = () => {
+  if (form.value.email.length > MAX_INPUT_LENGTH) {
+    form.value.email = form.value.email.slice(0, MAX_INPUT_LENGTH);
+  }
+};
+const enforceNicknameLength = () => {
+  if (form.value.nickname.length > MAX_INPUT_LENGTH) {
+    form.value.nickname = form.value.nickname.slice(0, MAX_INPUT_LENGTH);
+  }
+};
 
 /* ===== 회사 드롭다운 ===== */
 const onWindowClickCompanies = (e: MouseEvent) => {
@@ -394,8 +410,27 @@ const categoryById = computed(() => {
   return m;
 });
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const hasSelectedCompanies = computed(() => selected.value.companies.length > 0);
+const hasSelectedCategories = computed(() => selected.value.categories.length > 0);
+const hasValidEmail = computed(() => {
+  const email = form.value.email.trim();
+  return email.length > 0 && email.length <= MAX_INPUT_LENGTH && emailRegex.test(email);
+});
+const hasValidNickname = computed(() => {
+  const nickname = form.value.nickname.trim();
+  return nickname.length > 0 && nickname.length <= MAX_INPUT_LENGTH;
+});
+
 const canSubmit = computed(() => {
-  return !isSubmitting.value && agreedToPolicy.value;
+  return (
+    !isSubmitting.value &&
+    hasSelectedCompanies.value &&
+    hasSelectedCategories.value &&
+    hasValidEmail.value &&
+    hasValidNickname.value &&
+    agreedToPolicy.value
+  );
 });
 
 /* ===== 회사 선택 ===== */
@@ -493,6 +528,26 @@ const loadMoreCategories = async () => {
 /* ===== 제출 ===== */
 const submit = async () => {
   errors.value.submit = undefined;
+
+  if (!hasSelectedCompanies.value) {
+    errors.value.submit = "회사를 1개 이상 선택해주세요.";
+    return;
+  }
+
+  if (!hasSelectedCategories.value) {
+    errors.value.submit = "카테고리를 1개 이상 선택해주세요.";
+    return;
+  }
+
+  if (!hasValidEmail.value) {
+    errors.value.submit = "이메일 형식이 올바르지 않거나 255자를 초과했습니다.";
+    return;
+  }
+
+  if (!hasValidNickname.value) {
+    errors.value.submit = "닉네임을 입력해주세요. (최대 255자)";
+    return;
+  }
 
   if (!agreedToPolicy.value) {
     errors.value.submit = "개인정보처리방침 동의가 필요합니다.";
