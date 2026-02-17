@@ -192,6 +192,7 @@
                 v-model="form.email"
                 type="email"
                 class="input"
+                :maxlength="MAX_INPUT_LENGTH"
                 placeholder="artijjaek.dev@gmail.com"
                 :disabled="true"
                 readonly
@@ -208,7 +209,9 @@
               type="text"
               class="input"
               :class="{ 'is-invalid': errors.nickname }"
+              :maxlength="MAX_INPUT_LENGTH"
               placeholder="예: 준커"
+              @input="enforceNicknameLength"
               @blur="validateNickname"
               :disabled="isSubmitting"
             />
@@ -284,6 +287,7 @@ const successPopup = ref<{ open: boolean; title: string; message: string }>({
 });
 
 const form = ref({ email: "", nickname: "" });
+const MAX_INPUT_LENGTH = 255;
 const options = ref<{ companies: Company[]; categories: Category[] }>({ companies: [], categories: [] });
 const selected = ref<{ companies: number[]; categories: number[] }>({ companies: [], categories: [] });
 
@@ -333,6 +337,22 @@ const openCategoryDropdown = ref(false);
 
 /* 에러 */
 const errors = ref<{ companies?: string; categories?: string; nickname?: string; submit?: string }>({});
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const enforceEmailLength = () => {
+  if (form.value.email.length > MAX_INPUT_LENGTH) {
+    form.value.email = form.value.email.slice(0, MAX_INPUT_LENGTH);
+  }
+};
+const enforceNicknameLength = () => {
+  if (form.value.nickname.length > MAX_INPUT_LENGTH) {
+    form.value.nickname = form.value.nickname.slice(0, MAX_INPUT_LENGTH);
+  }
+};
+const normalizeFormTextLength = () => {
+  enforceEmailLength();
+  enforceNicknameLength();
+};
 
 /* 맵 */
 const allCompanyIds = computed(() => options.value.companies.map((c) => c.id));
@@ -499,6 +519,9 @@ const toggleSelectAllCategories = async () => {
 /* 검증 */
 const validateNickname = () => {
   if (!form.value.nickname.trim()) return (errors.value.nickname = "닉네임을 입력해주세요.");
+  if (form.value.nickname.trim().length > MAX_INPUT_LENGTH) {
+    return (errors.value.nickname = `닉네임은 ${MAX_INPUT_LENGTH}자 이하여야 합니다.`);
+  }
   errors.value.nickname = undefined;
 };
 const validateCompanies = () => {
@@ -541,9 +564,15 @@ const removeCategory = (id: number) => {
 /* 저장 */
 const save = async () => {
   errors.value.submit = undefined;
+  normalizeFormTextLength();
 
   if (!guard.hasValidParams.value) {
     errors.value.submit = "유효하지 않은 접근입니다. (필수 파라미터 누락)";
+    return;
+  }
+  const email = form.value.email.trim();
+  if (!email || email.length > MAX_INPUT_LENGTH || !emailRegex.test(email)) {
+    errors.value.submit = `이메일 형식이 올바르지 않거나 ${MAX_INPUT_LENGTH}자를 초과했습니다.`;
     return;
   }
   if (!validateAll()) return;
@@ -811,6 +840,7 @@ const loadInitial = async () => {
 
   form.value.email = me.email ?? emailFromQuery.value ?? "";
   form.value.nickname = me.nickname ?? "";
+  normalizeFormTextLength();
   const companiesRaw = me.companies ?? me.companyIds;
   const categoriesRaw = me.categories ?? me.categoryIds;
 
