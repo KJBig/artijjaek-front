@@ -182,8 +182,38 @@ const copyEmail = async (): Promise<void> => {
     align-items: flex-start;
     gap: 14px;
   }
+
   .links {
-    gap: 24px;
+    width: 100%;
+    gap: 16px;
+    flex-direction: column;
+  }
+
+  .row {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .inner {
+    padding: 20px 16px;
+  }
+
+  .brand-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .copy,
+  .link {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .copied-msg {
+    white-space: normal;
+    max-width: min(220px, calc(100vw - 48px));
   }
 }
 </style>
