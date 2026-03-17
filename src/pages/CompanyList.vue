@@ -6,12 +6,20 @@
           <h1 id="company-list-title" class="title">지원하는 회사 리스트</h1>
           <p class="desc">현재 구독 가능한 회사입니다.</p>
           <p class="desc">카드를 클릭하면 해당 회사의 블로그로 이동합니다.</p>
-          <p v-if="isDummyData" class="dummy-notice">
-            샘플 화면 확인용 더미 데이터가 표시되고 있습니다.
-          </p>
         </header>
 
-        <p v-if="loading" class="state">회사 목록을 불러오는 중입니다...</p>
+        <ul v-if="loading" class="grid grid-skeleton" aria-hidden="true">
+          <li v-for="slot in PAGE_SIZE" :key="`skeleton-${slot}`" class="card skeleton-card">
+            <div class="card-link">
+              <div class="logo skeleton-block skeleton-logo"></div>
+              <div class="meta">
+                <div class="skeleton-block skeleton-text skeleton-text-main"></div>
+                <div class="skeleton-block skeleton-text skeleton-text-sub"></div>
+              </div>
+            </div>
+          </li>
+        </ul>
+
         <p v-else-if="!companies.length" class="state">표시할 회사가 없습니다.</p>
 
         <ul v-else class="grid">
@@ -98,29 +106,17 @@ import { fetchCompaniesPage, type Company } from "../services/companyApi";
 
 const companies = ref<Company[]>([]);
 const loading = ref(true);
-const isDummyData = ref(false);
 const currentPage = ref(0);
 const totalPages = ref(1);
 const apiIsFirstPage = ref(true);
 const apiIsLastPage = ref(true);
 const PAGE_SIZE = 12;
 
-const DUMMY_COMPANIES: Company[] = [
-  { id: 9001, image: "", nameKr: "카카오", nameEn: "Kakao", blogUrl: "https://tech.kakao.com" },
-  { id: 9002, image: "", nameKr: "네이버", nameEn: "NAVER", blogUrl: "https://d2.naver.com" },
-  { id: 9003, image: "", nameKr: "토스", nameEn: "Toss", blogUrl: "https://toss.tech" },
-  { id: 9004, image: "", nameKr: "당근", nameEn: "Danggeun", blogUrl: "https://medium.com/daangn" },
-  { id: 9005, image: "", nameKr: "라인", nameEn: "LINE", blogUrl: "https://engineering.linecorp.com/ko" },
-  { id: 9006, image: "", nameKr: "우아한형제들", nameEn: "Woowa Brothers", blogUrl: "https://techblog.woowahan.com" },
-  { id: 9007, image: "", nameKr: "쿠팡", nameEn: "Coupang", blogUrl: "https://medium.com/coupang-tech" },
-  { id: 9008, image: "", nameKr: "무신사", nameEn: "MUSINSA", blogUrl: "https://medium.com/musinsa-tech" },
-];
-
 const isFirstPage = computed(() =>
-  isDummyData.value ? currentPage.value <= 0 : apiIsFirstPage.value
+  apiIsFirstPage.value
 );
 const isLastPage = computed(() =>
-  isDummyData.value ? currentPage.value >= totalPages.value - 1 : apiIsLastPage.value
+  apiIsLastPage.value
 );
 const emptySlots = computed(() => Math.max(PAGE_SIZE - companies.value.length, 0));
 
@@ -134,15 +130,12 @@ async function loadCompanies(page: number) {
     totalPages.value = Math.max(1, livePage.totalPages);
     apiIsFirstPage.value = livePage.isFirst;
     apiIsLastPage.value = livePage.isLast;
-    isDummyData.value = false;
   } else {
-    totalPages.value = Math.max(1, Math.ceil(DUMMY_COMPANIES.length / PAGE_SIZE));
-    currentPage.value = Math.min(Math.max(page, 0), totalPages.value - 1);
-    const start = currentPage.value * PAGE_SIZE;
-    companies.value = DUMMY_COMPANIES.slice(start, start + PAGE_SIZE);
-    apiIsFirstPage.value = currentPage.value <= 0;
-    apiIsLastPage.value = currentPage.value >= totalPages.value - 1;
-    isDummyData.value = true;
+    companies.value = [];
+    currentPage.value = 0;
+    totalPages.value = 0;
+    apiIsFirstPage.value = true;
+    apiIsLastPage.value = true;
   }
 
   loading.value = false;
@@ -199,13 +192,6 @@ onMounted(async () => {
   color: #66617a;
 }
 
-.dummy-notice {
-  margin: 10px 0 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: #5746c7;
-}
-
 .state {
   margin: 20px 0 0;
   font-size: 15px;
@@ -231,6 +217,48 @@ onMounted(async () => {
 
 .card-empty {
   visibility: hidden;
+}
+
+.skeleton-card {
+  overflow: hidden;
+}
+
+.skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background: #ece9ff;
+}
+
+.skeleton-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: skeleton-shimmer 1.2s infinite;
+}
+
+.skeleton-logo {
+  border-radius: 10px;
+}
+
+.skeleton-text {
+  border-radius: 999px;
+}
+
+.skeleton-text-main {
+  width: 112px;
+  height: 16px;
+}
+
+.skeleton-text-sub {
+  width: 74px;
+  height: 12px;
 }
 
 .card-link {
@@ -277,6 +305,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .name-kr {
