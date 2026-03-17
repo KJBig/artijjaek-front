@@ -7,7 +7,7 @@
           현재
           <span class="company-count-inline">
             <span v-if="companyCountLoading" class="company-count-skeleton" aria-hidden="true"></span>
-            <span v-else>{{ companyCountLabel }}</span>개
+            <span v-else class="company-count-value">{{ companyCountLabel }}</span>개
           </span>
           회사 지원 중
         </div>
@@ -373,6 +373,10 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 0;
+}
+
+.company-count-value {
+  font-weight: 800;
 }
 
 .hero-badge-dot {
