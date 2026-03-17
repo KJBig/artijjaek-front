@@ -843,6 +843,7 @@ onMounted(async () => {
   color: #2a2a2a;
   font-size: 14px;
   font-weight: 700;
+  text-align: left;
 }
 
 .email-article-card {
@@ -851,6 +852,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 10px;
+  text-align: left;
 }
 
 .email-article-card:last-of-type {
@@ -862,6 +864,7 @@ onMounted(async () => {
   font-weight: 700;
   color: #2b2a3a;
   line-height: 1.5;
+  text-align: left;
 }
 
 .email-article-meta {
@@ -904,6 +907,18 @@ onMounted(async () => {
     flex-direction: column;
     gap: 32px;
     padding: 48px 24px;
+    text-align: center;
+  }
+
+  .mascot-text,
+  .email-preview-text {
+    width: 100%;
+    max-width: 560px;
+    text-align: center;
+  }
+
+  .mascot-img-wrap {
+    margin: 0 auto;
   }
 
   .features {
@@ -936,6 +951,7 @@ onMounted(async () => {
     flex-direction: column;
     padding: 48px 24px;
     gap: 40px;
+    text-align: center;
   }
 
   .email-card {
@@ -946,12 +962,13 @@ onMounted(async () => {
 
 @media (max-width: 480px) {
   .btn-hero {
-    width: 100%;
+    width: auto;
   }
 
   .hero-actions {
-    width: 100%;
-    max-width: 320px;
+    width: auto;
+    max-width: none;
+    align-items: center;
   }
 
   .section-title {
