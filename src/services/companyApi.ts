@@ -119,10 +119,14 @@ export async function fetchAllCompanies(
 }
 
 export async function fetchCompanyCount(): Promise<number | null> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+
   try {
     const res = await fetch(`${BASE_URL}/api/v1/company/count`, {
       method: "GET",
-      headers: jsonHeaders
+      headers: jsonHeaders,
+      signal: controller.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -136,7 +140,13 @@ export async function fetchCompanyCount(): Promise<number | null> {
     }
     return null;
   } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      console.error("[fetchCompanyCount] Timeout");
+      return 0;
+    }
     console.error("[fetchCompanyCount] Error:", err);
     return null;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
