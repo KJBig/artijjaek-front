@@ -39,7 +39,13 @@
               >
                 <!-- 전체 선택 -->
                 <label class="option option-all">
-                  <input class="cb" type="checkbox" :checked="isAllSelectedCompanies" @change="toggleSelectAllCompanies" />
+                  <input
+                    class="cb"
+                    type="checkbox"
+                    :checked="isAllSelectedCompanies"
+                    :disabled="selectingAllCompanies"
+                    @change="toggleSelectAllCompanies"
+                  />
                   <span class="box" aria-hidden="true"></span>
                   <span class="option-label"><strong>전체 선택</strong></span>
                 </label>
@@ -289,6 +295,7 @@ const popup = ref<{ open: boolean; title: string; message: string, redirectTo?: 
 const pageCompanies = ref(0);
 const sizeCompanies = ref(10);
 const loadingCompanies = ref(false);
+const selectingAllCompanies = ref(false);
 const hasMoreCompanies = ref(true);
 const sentinelRef = ref<HTMLElement | null>(null);
 const menuRef = ref<HTMLElement | null>(null);
@@ -333,7 +340,7 @@ const toggleDropdown = async () => {
   if (openDropdown.value) {
     if (options.value.companies.length === 0) await loadMoreCompanies();
     await nextTick();
-    if (sentinelRef.value) {
+    if (hasMoreCompanies.value && sentinelRef.value) {
       observer = new IntersectionObserver(
         (entries) => entries.forEach((e) => e.isIntersecting && loadMoreCompanies()),
         { root: menuRef.value ?? undefined, threshold: 0.2 }
@@ -349,6 +356,10 @@ const cleanupDropdownCompanies = () => {
   if (observer && sentinelRef.value) observer.unobserve(sentinelRef.value);
   observer = null;
   window.removeEventListener("click", onWindowClickCompanies, { capture: true } as any);
+};
+const stopCompanyPaginationObserver = () => {
+  if (observer && sentinelRef.value) observer.unobserve(sentinelRef.value);
+  observer = null;
 };
 
 /* ===== 카테고리 드롭다운 ===== */
@@ -458,10 +469,17 @@ const toggleSelectAllCompanies = async () => {
   if (isAllSelectedCompanies.value) {
     selected.value.companies = [];
   } else {
-    const all = await fetchAllCompanies(sizeCompanies.value, "POPULARITY");
-    selected.value.companies = all.map((c) => c.id);
-    options.value.companies = all;
-    hasMoreCompanies.value = false;
+    selectingAllCompanies.value = true;
+    try {
+      const all = await fetchAllCompanies("POPULARITY");
+      selected.value.companies = all.map((c) => c.id);
+      options.value.companies = all;
+      pageCompanies.value = 0;
+      hasMoreCompanies.value = false;
+      stopCompanyPaginationObserver();
+    } finally {
+      selectingAllCompanies.value = false;
+    }
   }
 };
 
@@ -501,18 +519,21 @@ const toggleSelectAllCategories = async () => {
 
 /* ===== API 호출 + 무한 스크롤 ===== */
 const loadMoreCompanies = async () => {
-  if (loadingCompanies.value || !hasMoreCompanies.value) return;
+  if (loadingCompanies.value || selectingAllCompanies.value || !hasMoreCompanies.value) return;
   loadingCompanies.value = true;
-  const { items, hasMore, nextPage } = await fetchCompanyPage(
-    pageCompanies.value,
-    sizeCompanies.value,
-    "POPULARITY"
-  );
-  const exist = new Set(options.value.companies.map((c) => c.id));
-  options.value.companies.push(...items.filter((c) => !exist.has(c.id)));
-  hasMoreCompanies.value = !!hasMore;
-  pageCompanies.value = nextPage ?? pageCompanies.value + 1;
-  loadingCompanies.value = false;
+  try {
+    const { items, hasMore, nextPage } = await fetchCompanyPage(
+      pageCompanies.value,
+      sizeCompanies.value,
+      "POPULARITY"
+    );
+    const exist = new Set(options.value.companies.map((c) => c.id));
+    options.value.companies.push(...items.filter((c) => !exist.has(c.id)));
+    hasMoreCompanies.value = !!hasMore;
+    pageCompanies.value = nextPage ?? pageCompanies.value + 1;
+  } finally {
+    loadingCompanies.value = false;
+  }
 };
 const loadMoreCategories = async () => {
   if (loadingCategories.value || !hasMoreCategories.value) return;

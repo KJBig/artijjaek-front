@@ -104,18 +104,92 @@ export async function fetchCompaniesPage(
  * 전체 회사 목록을 모두 불러오는 함수 (전체선택용)
  */
 export async function fetchAllCompanies(
+  sortOption?: CompanySortOption
+): Promise<Company[]> {
+  const count = await fetchCompanyCount();
+
+  if (typeof count === "number" && count > 0) {
+    const response = await fetchCompaniesPage(0, count, sortOption);
+    return dedupeCompanies(response.items);
+  }
+
+  const direct = await fetchAllCompaniesDirect(sortOption);
+  if (direct) return direct;
+
+  return fetchAllCompaniesViaPaging(100, sortOption);
+}
+
+function dedupeCompanies(items: Company[]): Company[] {
+  const companyMap = new Map<number, Company>();
+  for (const item of items) companyMap.set(item.id, item);
+  return Array.from(companyMap.values());
+}
+
+async function fetchAllCompaniesDirect(
+  sortOption?: CompanySortOption
+): Promise<Company[] | null> {
+  const qs = new URLSearchParams();
+  if (sortOption) qs.set("sort_option", sortOption);
+  const query = qs.toString();
+  const url = `${BASE_URL}/api/v1/company/list${query ? `?${query}` : ""}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: jsonHeaders
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const payload = data?.data;
+
+    if (Array.isArray(payload)) {
+      return dedupeCompanies(payload.map(toCompany));
+    }
+
+    const rawItems = Array.isArray(payload?.content) ? payload.content : null;
+    if (!rawItems) return null;
+
+    const items = dedupeCompanies(rawItems.map(toCompany));
+    const totalElements =
+      typeof payload?.totalElements === "number" ? payload.totalElements : null;
+    const isLastPage = typeof payload?.last === "boolean" ? payload.last : null;
+
+    if (totalElements != null && totalElements > items.length) return null;
+    if (isLastPage === false) return null;
+
+    return items;
+  } catch (err) {
+    console.error("[fetchAllCompaniesDirect] Error:", err);
+    return null;
+  }
+}
+
+async function fetchAllCompaniesViaPaging(
   size = 100,
   sortOption?: CompanySortOption
 ): Promise<Company[]> {
   const all: Company[] = [];
   let page = 0;
+
   while (true) {
-    const { items, hasMore, nextPage } = await fetchCompaniesPage(page, size, sortOption);
-    if (items.length) all.push(...items);
-    if (!hasMore || nextPage == null) break;
-    page = nextPage;
+    const response = await fetchCompaniesPage(page, size, sortOption);
+    if (response.items.length) all.push(...response.items);
+    if (!response.hasMore || response.nextPage == null) break;
+    page = response.nextPage;
   }
-  return all;
+
+  return dedupeCompanies(all);
+}
+
+function toCompany(company: any): Company {
+  return {
+    id: company.companyId ?? company.id,
+    image: company.companyImageUrl ?? company.image ?? "",
+    nameKr: company.companyNameKr ?? company.nameKr ?? "",
+    nameEn: company.companyNameEn ?? company.nameEn ?? "",
+    blogUrl: company.companyBlogUrl ?? company.blogUrl ?? ""
+  };
 }
 
 export async function fetchCompanyCount(): Promise<number | null> {
