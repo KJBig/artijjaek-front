@@ -56,13 +56,35 @@ export async function fetchCompaniesPage(
       blogUrl: company.companyBlogUrl ?? company.blogUrl ?? ""
     }));
 
-    const currentPage = typeof payload?.number === "number" ? payload.number : page;
-    const pageSize = typeof payload?.size === "number" ? payload.size : size;
-    const totalPages = typeof payload?.totalPages === "number" ? payload.totalPages : 0;
-    const totalElements = typeof payload?.totalElements === "number" ? payload.totalElements : 0;
+    const currentPage =
+      typeof payload?.pageNumber === "number"
+        ? payload.pageNumber
+        : typeof payload?.number === "number"
+          ? payload.number
+          : page;
+    const pageSize =
+      typeof payload?.pageSize === "number"
+        ? payload.pageSize
+        : typeof payload?.size === "number"
+          ? payload.size
+          : size;
+    const totalPages =
+      typeof payload?.totalPage === "number"
+        ? payload.totalPage
+        : typeof payload?.totalPages === "number"
+          ? payload.totalPages
+          : 0;
+    const totalElements =
+      typeof payload?.totalCount === "number"
+        ? payload.totalCount
+        : typeof payload?.totalElements === "number"
+          ? payload.totalElements
+          : 0;
 
     let hasMore: boolean;
-    if (typeof payload?.last === "boolean") {
+    if (typeof payload?.hasNext === "boolean") {
+      hasMore = payload.hasNext;
+    } else if (typeof payload?.last === "boolean") {
       hasMore = !payload.last;
     } else if (typeof totalPages === "number" && totalPages > 0) {
       hasMore = currentPage + 1 < totalPages;
@@ -71,7 +93,12 @@ export async function fetchCompaniesPage(
     }
 
     const isFirst = typeof payload?.first === "boolean" ? payload.first : currentPage === 0;
-    const isLast = typeof payload?.last === "boolean" ? payload.last : !hasMore;
+    const isLast =
+      typeof payload?.hasNext === "boolean"
+        ? !payload.hasNext
+        : typeof payload?.last === "boolean"
+          ? payload.last
+          : !hasMore;
 
     return {
       items,
@@ -152,8 +179,17 @@ async function fetchAllCompaniesDirect(
 
     const items = dedupeCompanies(rawItems.map(toCompany));
     const totalElements =
-      typeof payload?.totalElements === "number" ? payload.totalElements : null;
-    const isLastPage = typeof payload?.last === "boolean" ? payload.last : null;
+      typeof payload?.totalCount === "number"
+        ? payload.totalCount
+        : typeof payload?.totalElements === "number"
+          ? payload.totalElements
+          : null;
+    const isLastPage =
+      typeof payload?.hasNext === "boolean"
+        ? !payload.hasNext
+        : typeof payload?.last === "boolean"
+          ? payload.last
+          : null;
 
     if (totalElements != null && totalElements > items.length) return null;
     if (isLastPage === false) return null;

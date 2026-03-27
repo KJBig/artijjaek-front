@@ -12,22 +12,42 @@
         </header>
 
         <section class="contact-group">
-          <div class="field">
-            <label class="label" for="contact-email">
-              이메일 <small>(답변 받을 주소)</small>
+          <div class="reply-option">
+            <label class="check-label">
+              <input
+                v-model="wantsReply"
+                type="checkbox"
+                :disabled="busy"
+              />
+              <span>이메일로 답변 받기</span>
             </label>
-            <input
-              id="contact-email"
-              class="input"
-              type="email"
-              v-model.trim="email"
-              maxlength="255"
-              placeholder="ex) example@email.com"
-              :disabled="busy"
-              autocomplete="email"
-              required
-            />
+            <p class="reply-help">
+              체크하지 않으면 이메일 주소 없이 문의만 남길 수 있습니다.
+            </p>
           </div>
+
+          <Transition name="email-field" mode="out-in">
+            <div v-if="wantsReply" key="email-input" class="field email-panel">
+              <label class="label" for="contact-email">
+                이메일 <small>(답변 받을 주소)</small>
+              </label>
+              <input
+                id="contact-email"
+                class="input"
+                type="email"
+                v-model.trim="email"
+                maxlength="255"
+                placeholder="ex) example@email.com"
+                :disabled="busy"
+                autocomplete="email"
+                :required="wantsReply"
+              />
+            </div>
+            <div v-else key="email-skip" class="reply-skip email-panel" aria-live="polite">
+              <strong>이메일 답변 없이 문의만 접수됩니다.</strong>
+              <p>답변이 필요해지면 체크 후 이메일 주소를 입력해주세요.</p>
+            </div>
+          </Transition>
 
           <!-- 문의 내용 -->
           <div class="field">
@@ -77,17 +97,18 @@ import { postInquiry } from "../services/inquiryApi.ts";
 
 const router = useRouter();
 
-const email = ref(""); // ✅ 추가
+const wantsReply = ref(true);
+const email = ref("");
 const message = ref("");
 const busy = ref(false);
 const showPopup = ref(false);
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isSubmitDisabled = computed(() => {
   const msgLen = message.value.trim().length;
   const emailTrimmed = email.value.trim();
-
-  // ✅ 간단 이메일 형식 검증
-  const emailValid = emailTrimmed.length <= 255 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
+  const emailValid = !wantsReply.value
+    || (emailTrimmed.length <= 255 && emailPattern.test(emailTrimmed));
 
   return busy.value || !emailValid || msgLen < 1 || msgLen > 1000;
 });
@@ -97,9 +118,8 @@ const onSubmit = async () => {
   busy.value = true;
 
   try {
-    // ✅ email + content 전송
     const resp = await postInquiry({
-      email: email.value.trim(),
+      email: wantsReply.value ? email.value.trim() : undefined,
       content: message.value.trim(),
     });
 
@@ -179,6 +199,93 @@ const goHome = () => router.push("/");
   gap: 14px;
 }
 
+.reply-option {
+  display: grid;
+  gap: 6px;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1f1f2b;
+  font-weight: 600;
+}
+
+.check-label input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid #c9c6db;
+  border-radius: 5px;
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.check-label input::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(-45deg) translateY(-1px);
+  transition: border-color 0.16s ease;
+}
+
+.check-label input:checked {
+  border-color: #5a5ad6;
+  background: #5a5ad6;
+}
+
+.check-label input:checked::after {
+  border-left-color: #fff;
+  border-bottom-color: #fff;
+}
+
+.check-label input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(90, 90, 214, 0.16);
+}
+
+.reply-help {
+  margin: 0;
+  font-size: 13px;
+  color: #6e6a7e;
+}
+
+.email-panel {
+  min-height: 88px;
+}
+
+.reply-skip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px dashed rgba(102, 117, 224, 0.28);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 244, 255, 0.92) 100%);
+  color: #4b4960;
+}
+
+.reply-skip strong {
+  display: block;
+  font-size: 14px;
+  color: #2c2a3b;
+}
+
+.reply-skip p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6e6a7e;
+  line-height: 1.5;
+}
+
 .input {
   width: 100%;
   border: 1px solid #deddee;
@@ -198,6 +305,18 @@ const goHome = () => router.push("/");
 .input::placeholder {
   color: #8a86a0;
 }
+
+.email-field-enter-active,
+.email-field-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.email-field-enter-from,
+.email-field-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 .count {
   text-align: right;
   font-size: 12px;
