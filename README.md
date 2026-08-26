@@ -1,5 +1,32 @@
-# Vue 3 + TypeScript + Vite
+# artijjaek-front
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+## API proxy routing
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+This project is a static `Vite + Vue` frontend. To keep email links in the form below while still letting the backend handle the request:
+
+`https://www.artijjaek.kr/api/v1/email-links/{articleId}?trackingToken={token}`
+
+the hosting layer must proxy `/api/*` to the backend origin.
+
+### Included configs
+
+- `vercel.json`
+  Uses rewrites so `https://www.artijjaek.kr/api/*` is forwarded to `https://prod-server.artijjaek.kr/api/*`.
+- `nginx.conf`
+  Sample reverse-proxy config for Nginx-based hosting.
+- `vite.config.ts`
+  Adds a local dev proxy for `/api/*` so the same-origin path can be tested locally.
+
+### Local development
+
+If you want the Vite dev server to forward `/api/*` somewhere other than `http://localhost:8080`, set:
+
+```bash
+VITE_API_PROXY_TARGET=https://prod-server.artijjaek.kr
+```
+
+### Routing intent
+
+- `www.artijjaek.kr -> /api/* -> backend`
+- minimum required path: `/api/v1/email-links/*`
+- recommended broader rule: proxy all `/api/*`
