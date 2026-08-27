@@ -22,9 +22,11 @@
         <details class="policy-item">
           <summary>2. 수집하는 개인정보 항목</summary>
           <div class="policy-content">
-            <p>서비스는 다음의 개인정보를 수집합니다.</p>
+            <p>서비스는 구독 메일 발송과 아티클 반응 집계를 위해 다음의 정보를 수집합니다.</p>
             <ul>
               <li>이메일 주소</li>
+              <li>이메일 내 아티클 클릭 기록</li>
+              <li>클릭 브라우저 정보</li>
             </ul>
           </div>
         </details>
@@ -39,6 +41,8 @@
               <li>구독 해지 처리</li>
               <li>문의 응대 및 답변 발송</li>
               <li>서비스 운영 및 오류 대응</li>
+              <li>아티클 클릭 수 집계 및 랭킹 시스템 운영</li>
+              <li>이용자가 관심을 보인 콘텐츠 분석 및 메일 품질 개선</li>
             </ol>
           </div>
         </details>
@@ -51,6 +55,7 @@
             <ul>
               <li>관련 법령에 따라 보관이 필요한 경우 해당 기간 동안 보관 후 파기합니다.</li>
             </ul>
+            <p>아티클 클릭 기록 및 브라우저 정보는 서비스 운영, 통계 분석 및 콘텐츠 개선에 필요한 기간 동안 보관 후 파기합니다.</p>
           </div>
         </details>
 
@@ -98,13 +103,29 @@
         </details>
 
         <details class="policy-item">
-          <summary>9. 개인정보 처리방침 변경</summary>
+          <summary>9. 이메일 링크 클릭 정보 처리 안내</summary>
+          <div class="policy-content">
+            <p>서비스는 발송된 이메일 내 아티클 링크 클릭 여부를 확인할 수 있으며, 이를 통해 어떤 아티클이 많이 클릭되었는지 집계하고 메일 품질 및 콘텐츠 구성을 개선할 수 있습니다.</p>
+            <ul>
+              <li>이메일로 발송된 아티클 링크 클릭 여부가 기록될 수 있습니다.</li>
+              <li>어떤 아티클이 많이 클릭되었는지 확인하기 위한 클릭 통계가 집계될 수 있습니다.</li>
+              <li>서비스 품질 확인을 위해 클릭이 발생한 브라우저 정보가 함께 확인될 수 있습니다.</li>
+              <li>수집된 정보는 아티클 랭킹 집계, 콘텐츠 개선 및 서비스 운영 목적 범위에서만 활용됩니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="policy-item">
+          <summary>10. 개인정보 처리방침 변경</summary>
           <div class="policy-content">
             <p>본 방침은 변경될 수 있으며, 변경 시 서비스 공지 또는 이메일을 통해 사전 안내합니다.</p>
           </div>
         </details>
 
-        <p class="policy-date">시행일: 2026년 2월 14일</p>
+        <div class="policy-dates">
+          <p class="policy-date">최초 시행일: 2026년 2월 14일</p>
+          <p class="policy-date">최종 수정일: 2026년 8월 27일</p>
+        </div>
       </section>
     </main>
   </div>
@@ -199,8 +220,14 @@
 }
 
 .policy-date {
-  margin: 16px 2px 0;
+  margin: 0;
   color: #6e6a7e;
   font-size: 13px;
+}
+
+.policy-dates {
+  margin: 16px 2px 0;
+  display: grid;
+  gap: 4px;
 }
 </style>
