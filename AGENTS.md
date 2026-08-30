@@ -23,9 +23,13 @@
 
 ## 검증
 
-- 의존성 설치는 기존 lockfile을 존중해 `npm ci`를 우선한다.
-- 코드 변경 후 최소 `npm run build`를 실행한다.
-- 별도 lint/test 스크립트가 추가되거나 존재하면 변경 범위에 맞게 함께 실행한다.
+- 작업 환경의 OS와 셸을 먼저 확인한다. npm 명령은 Windows PowerShell과 macOS/Linux 셸에서 동일하게 `npm ci`, `npm run build` 형식으로 실행하며 플랫폼별 wrapper를 만들지 않는다.
+- 의존성 설치는 기존 `package-lock.json`을 존중해 `npm ci`를 우선한다.
+- 코드나 설정을 변경했다면 push 전에 `npm run build`를 반드시 실행한다.
+- `package.json`에 lint 또는 test 스크립트가 존재하면 push 전에 해당 명령도 반드시 실행한다.
+- 필수 build, lint 또는 test가 실패하면 원인을 수정하고 다시 검증하기 전까지 push하지 않는다. 실행할 수 없으면 push하지 않고 이유와 위험을 보고한다.
+- Markdown 문서나 코드 동작에 영향을 주지 않는 주석만 변경한 경우에는 `npm run build`를 생략할 수 있으며, 생략 사실을 결과에 명시한다.
+- 여러 에이전트가 같은 프로젝트의 build, lint 또는 test를 중복으로 병렬 실행하지 않는다. 담당 구현자가 한 번 실행하고 리뷰어와 PM은 그 결과를 확인하되, 변경 이후 재검증이 필요할 때만 다시 실행한다.
 - UI 변경은 주요 화면 크기와 로딩·빈 상태·오류 상태를 확인한다.
 
 ## Git
